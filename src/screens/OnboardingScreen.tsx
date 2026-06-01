@@ -33,13 +33,18 @@ const PAGES: Page[] = [
     cta: "understood →",
   },
   {
+    title: "share with friends.",
+    body: "turn your timetable into a QR code.\n\nfriends can scan it in-app or import the QR image from their gallery.\n\nimported timetables stay on this phone as snapshots — no accounts, no cloud, no contact upload.",
+    cta: "got it →",
+  },
+  {
     title: "what you get.",
     features: [
       "→  auto-sync from vtop",
       "→  today's classes at a glance",
       "→  full semester history",
-      "→  share your timetable",
-      "→  home screen widgets",
+      "→  QR timetable sharing",
+      "→  searchable friends tab",
     ],
     cta: "nice →",
   },
