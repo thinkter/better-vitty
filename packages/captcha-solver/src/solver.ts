@@ -1,8 +1,7 @@
-import { bitmaps } from "./bitmaps";
+import { CAPTCHA_LABELS } from "./lib/constants";
+import { bitmaps } from "./lib/bitmaps";
+import type { RgbaData } from "./lib/types";
 import { decodeImage, extractDataUriParts, resizeImage } from "./image";
-
-type RgbaData = Uint8Array | Uint8ClampedArray;
-const LABELS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function captchaParse(imgarr: number[][]): string {
   let captcha = "";
@@ -128,7 +127,7 @@ export async function solveCaptcha(imgDataUri: string): Promise<string> {
   let out = "";
   for (let i = 0; i < 6; i += 1) {
     const input = flatten(preImg(blocks[i] ?? []));
-    out += LABELS[classify(input, weights, biases)] ?? "";
+    out += CAPTCHA_LABELS[classify(input, weights, biases)] ?? "";
   }
   return out;
 }

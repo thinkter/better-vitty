@@ -1,16 +1,11 @@
 import { solveCaptcha } from "@better-vitty/captcha-solver";
-import type { AuthSession, LoginResult } from "../types";
+import type { AuthSession, LoginResult } from "../lib/types";
+import type { LoginOptions } from "../lib/vtopTypes";
 import { VtopClient } from "./client";
 import { VtopError } from "./errors";
 import { extractAuthorizedId, extractCaptchaDataUri, extractCsrf, isRecaptchaPage } from "./parser";
+export type { LoginOptions } from "../lib/vtopTypes";
 
-export interface LoginOptions {
-  readonly username: string;
-  readonly password: string;
-  readonly maxCaptchaAttempts?: number;
-  readonly maxCaptchaPageAttempts?: number;
-  readonly onStatus?: (status: string) => void;
-}
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

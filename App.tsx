@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import type { SemesterTimetable } from "./src/types";
+import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
+import { appStyles as styles } from "./src/lib/appStyles";
+import type { AppPhase, SemesterTimetable } from "./src/lib/types";
 import { loadTimetables, saveTimetables } from "./src/storage/timetableStore";
 import { VtopClient } from "./src/vtop/client";
 import { asVtopError } from "./src/vtop/errors";
 import { loginToVtop } from "./src/vtop/login";
 import { fetchAllTimetables } from "./src/vtop/timetable";
 
-type Phase = "idle" | "loading" | "syncing" | "done" | "error";
 
 function renderTimetables(timetables: readonly SemesterTimetable[]): string {
   if (timetables.length === 0) return "no saved timetables\nlogin and sync to fetch VTOP data";
@@ -29,7 +29,7 @@ function renderTimetables(timetables: readonly SemesterTimetable[]): string {
 export default function App() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [phase, setPhase] = useState<Phase>("loading");
+  const [phase, setPhase] = useState<AppPhase>("loading");
   const [status, setStatus] = useState("loading local store");
   const [error, setError] = useState("");
   const [timetables, setTimetables] = useState<SemesterTimetable[]>([]);
@@ -124,20 +124,3 @@ export default function App() {
   );
 }
 
-const mono = "monospace";
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#000" },
-  content: { padding: 20, gap: 10 },
-  title: { color: "#fff", fontFamily: mono, fontSize: 22, fontWeight: "700" },
-  line: { color: "#fff", fontFamily: mono, fontSize: 14 },
-  prompt: { color: "#fff", fontFamily: mono, fontSize: 13, marginTop: 8 },
-  input: { borderColor: "#fff", borderWidth: 1, color: "#fff", fontFamily: mono, minHeight: 44, paddingHorizontal: 10 },
-  button: { borderColor: "#fff", borderWidth: 1, marginTop: 8, padding: 12 },
-  disabled: { opacity: 0.35 },
-  pressed: { backgroundColor: "#222" },
-  buttonText: { color: "#fff", fontFamily: mono, textAlign: "center" },
-  status: { color: "#fff", fontFamily: mono, marginTop: 10 },
-  error: { color: "#ff7777", fontFamily: mono },
-  outputBox: { borderColor: "#333", borderWidth: 1, marginTop: 8, padding: 10 },
-  output: { color: "#fff", fontFamily: mono, fontSize: 12, lineHeight: 18 },
-});

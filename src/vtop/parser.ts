@@ -1,4 +1,5 @@
-import type { Course, Semester, TimetableEvent } from "../types";
+import type { Course, Semester, TimetableEvent } from "../lib/types";
+import { COURSE_CODE_PATTERN } from "../lib/vtopConstants";
 import { VtopError } from "./errors";
 
 function decodeHtml(value: string): string {
@@ -96,10 +97,9 @@ function tableRows(html: string): string[][] {
   return rows;
 }
 
-const COURSE_CODE_RE = /[A-Z]{2,}\d{3,}[A-Z]?/;
 
 function splitCourseCell(value: string): { code: string; title: string; type: string } | null {
-  const match = COURSE_CODE_RE.exec(value);
+  const match = COURSE_CODE_PATTERN.exec(value);
   if (!match) return null;
   const code = match[0];
   const afterCode = value.slice((match.index ?? 0) + code.length);
@@ -141,7 +141,7 @@ export function parseCourses(html: string): Course[] {
 }
 
 function findCourseCode(value: string): string {
-  return COURSE_CODE_RE.exec(value)?.[0] ?? "";
+  return COURSE_CODE_PATTERN.exec(value)?.[0] ?? "";
 }
 
 export function parseTimetableEvents(html: string): TimetableEvent[] {

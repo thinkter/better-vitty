@@ -1,13 +1,12 @@
 import * as SQLite from "expo-sqlite";
-import type { SemesterTimetable } from "../types";
+import { TIMETABLE_DB_NAME } from "../lib/storageConstants";
+import type { SQLiteDatabase } from "../lib/storageTypes";
+import type { SemesterTimetable } from "../lib/types";
 
-const DB_NAME = "better-vitty.db";
-
-type SQLiteDatabase = Awaited<ReturnType<typeof SQLite.openDatabaseAsync>>;
 let dbPromise: Promise<SQLiteDatabase> | null = null;
 
 async function database(): Promise<SQLiteDatabase> {
-  dbPromise ??= SQLite.openDatabaseAsync(DB_NAME);
+  dbPromise ??= SQLite.openDatabaseAsync(TIMETABLE_DB_NAME);
   const db = await dbPromise;
   await db.execAsync(`
     PRAGMA journal_mode = WAL;

@@ -1,37 +1,9 @@
+import { BROWSER_HEADERS, DEFAULT_VTOP_BASE_URL } from "../lib/vtopConstants";
+import type { StoredCookie, VtopClientOptions, VtopResponse } from "../lib/vtopTypes";
 import { VtopError, asVtopError, mapHttpStatus } from "./errors";
+export type { VtopClientOptions, VtopResponse } from "../lib/vtopTypes";
 
-export interface VtopResponse {
-  readonly url: string;
-  readonly status: number;
-  readonly headers: Headers;
-  readonly text: string;
-}
 
-export interface VtopClientOptions {
-  readonly fetchImpl?: typeof fetch;
-  readonly baseUrl?: string;
-}
-
-interface StoredCookie {
-  readonly name: string;
-  readonly value: string;
-  readonly path: string;
-}
-
-const DEFAULT_BASE_URL = "https://vtop.vit.ac.in";
-
-const BROWSER_HEADERS: Readonly<Record<string, string>> = {
-  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-  "Accept-Language": "en-US,en;q=0.9",
-  "Cache-Control": "max-age=0",
-  "Sec-Fetch-Dest": "document",
-  "Sec-Fetch-Mode": "navigate",
-  "Sec-Fetch-Site": "none",
-  "Sec-Fetch-User": "?1",
-  "Upgrade-Insecure-Requests": "1",
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-};
 
 function splitSetCookie(header: string): string[] {
   const values: string[] = [];
@@ -62,7 +34,7 @@ export class VtopClient {
 
   constructor(options: VtopClientOptions = {}) {
     this.fetchImpl = options.fetchImpl ?? fetch;
-    this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
+    this.baseUrl = (options.baseUrl ?? DEFAULT_VTOP_BASE_URL).replace(/\/$/, "");
   }
 
   clearSession(): void {

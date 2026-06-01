@@ -1,11 +1,10 @@
-import type { AuthSession, SemesterTimetable } from "../types";
+import type { AuthSession, SemesterTimetable } from "../lib/types";
+import type { SyncOptions } from "../lib/vtopTypes";
 import { VtopClient } from "./client";
 import { VtopError } from "./errors";
 import { parseSemesters, parseTimetableHtml } from "./parser";
+export type { SyncOptions } from "../lib/vtopTypes";
 
-export interface SyncOptions {
-  readonly onStatus?: (status: string) => void;
-}
 
 export async function fetchAllTimetables(
   client: VtopClient,

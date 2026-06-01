@@ -1,17 +1,8 @@
 import { Buffer } from "buffer";
 import * as jpeg from "jpeg-js";
 import { decode as decodePng } from "fast-png";
+import type { DataUriParts, DecodedImage } from "./lib/types";
 
-export interface DecodedImage {
-  readonly width: number;
-  readonly height: number;
-  readonly data: Uint8Array | Uint8ClampedArray;
-}
-
-export interface DataUriParts {
-  readonly mimeType: string;
-  readonly base64: string;
-}
 
 export function extractDataUriParts(dataUri: string): DataUriParts | null {
   const match = /^data:([^;]+);base64,(.+)$/.exec(dataUri.trim());

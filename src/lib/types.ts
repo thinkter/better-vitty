@@ -42,3 +42,5 @@ export interface LoginResult {
   readonly session: AuthSession;
   readonly attempts: number;
 }
+
+export type AppPhase = "idle" | "loading" | "syncing" | "done" | "error";
