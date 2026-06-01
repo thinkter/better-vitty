@@ -96,9 +96,10 @@ export function TimetableScreen({ timetables, onResync }: Props) {
   const timetable = timetables[semesterIdx];
 
   const selectDay = useCallback((idx: number) => {
+    setDayIdx(idx);
     setShowPicker(false);
-    dayListRef.current?.scrollToIndex({ index: idx, animated: true });
-  }, []);
+    dayListRef.current?.scrollToOffset({ offset: idx * width, animated: true });
+  }, [width]);
 
   const handleScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -234,6 +235,12 @@ export function TimetableScreen({ timetables, onResync }: Props) {
         data={DAY_ORDER}
         horizontal
         pagingEnabled
+        snapToInterval={width}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        disableIntervalMomentum
+        bounces={false}
+        overScrollMode="never"
         showsHorizontalScrollIndicator={false}
         initialScrollIndex={dayIdx}
         getItemLayout={(_, index) => ({
@@ -247,7 +254,7 @@ export function TimetableScreen({ timetables, onResync }: Props) {
           { useNativeDriver: true },
         )}
         onMomentumScrollEnd={handleScrollEnd}
-        scrollEventThrottle={16}
+        scrollEventThrottle={8}
         style={styles.dayList}
         renderItem={({ item: day }) => {
           const events = eventsForDay(timetable.events, day);
@@ -498,7 +505,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   eventMeta: {
-    color: "#444",
+    color: "#bbb",
     fontFamily: MONO,
     fontSize: 12,
     marginTop: 2,

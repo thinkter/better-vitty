@@ -1,5 +1,12 @@
 import { useRef, useState } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { markOnboardingComplete } from "../storage/onboardingStore";
 
@@ -16,12 +23,13 @@ interface Page {
 const PAGES: Page[] = [
   {
     title: "better-vitty",
-    body: "your vtop timetable, automatically.\nno copy-pasting. no spreadsheets.\ntap sync once. you're done.",
+    body: "your vtop timetable, automatically.\nno copy-pasting.\ntap sync once. you're done.",
     cta: "get started →",
   },
   {
-    title: "no cloud. ever.",
-    body: "your vtop credentials never leave this phone.\n\nthe app talks directly to vtop.vit.ac.in — the same way your browser does.\n\nno servers in between. no data collected.\nnothing phoned home. ever.",
+    // title: "no cloud. ever.",
+    title: "local first.",
+    body: "your vtop credentials and timetable never leave this phone.\n\nthe app talks directly to vtop.vit.ac.in — the same way your browser does.\n\nno servers in between. no data collected.\nnothing stored. ever.",
     cta: "understood →",
   },
   {
@@ -38,7 +46,7 @@ const PAGES: Page[] = [
   {
     title: "open source.",
     body: "we have nothing to hide.\n\nevery line of code is public on github.\ninspect exactly what happens to your credentials — right down to the network request.",
-    note: "github.com/user/better-vitty",
+    note: "github.com/thinkter/better-vitty",
     cta: "connect to vtop →",
   },
 ];
@@ -83,7 +91,9 @@ export function OnboardingScreen({ onComplete }: Props) {
     <SafeAreaView style={styles.screen}>
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         {/* Page counter */}
-        <Text style={styles.counter}>[{pageIdx + 1}/{PAGES.length}]</Text>
+        <Text style={styles.counter}>
+          [{pageIdx + 1}/{PAGES.length}]
+        </Text>
 
         {/* Main body */}
         <View style={styles.main}>
@@ -116,7 +126,10 @@ export function OnboardingScreen({ onComplete }: Props) {
 
           <View style={styles.dots}>
             {PAGES.map((_, idx) => (
-              <Text key={idx} style={idx === pageIdx ? styles.dotActive : styles.dotInactive}>
+              <Text
+                key={idx}
+                style={idx === pageIdx ? styles.dotActive : styles.dotInactive}
+              >
                 {idx === pageIdx ? "●" : "○"}
               </Text>
             ))}

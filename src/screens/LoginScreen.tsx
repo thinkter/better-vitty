@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { AppPhase, SemesterTimetable } from "../lib/types";
 import { saveTimetables } from "../storage/timetableStore";
@@ -9,8 +17,7 @@ import { loginToVtop } from "../vtop/login";
 import { fetchAllTimetables } from "../vtop/timetable";
 
 const MONO = "monospace";
-// TODO: replace with the real repository URL before shipping
-const GITHUB_URL = "https://github.com/user/better-vitty";
+const GITHUB_URL = "https://github.com/thinkter/better-vitty";
 
 interface Props {
   onSync: (timetables: SemesterTimetable[]) => void;
@@ -37,10 +44,16 @@ export function LoginScreen({ onSync }: Props) {
         password,
         onStatus: setStatus,
       });
-      setStatus(`authenticated (${login.attempts} captcha attempt${login.attempts === 1 ? "" : "s"})`);
-      const fetched = await fetchAllTimetables(client, login.session, { onStatus: setStatus });
+      setStatus(
+        `authenticated (${login.attempts} captcha attempt${login.attempts === 1 ? "" : "s"})`,
+      );
+      const fetched = await fetchAllTimetables(client, login.session, {
+        onStatus: setStatus,
+      });
       await saveTimetables(fetched);
-      setStatus(`saved ${fetched.length} semester${fetched.length === 1 ? "" : "s"} to device`);
+      setStatus(
+        `saved ${fetched.length} semester${fetched.length === 1 ? "" : "s"} to device`,
+      );
       setPhase("done");
       onSync(fetched);
     } catch (err) {
@@ -53,26 +66,29 @@ export function LoginScreen({ onSync }: Props) {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Heading */}
         <Text style={styles.title}>connect to vtop.</Text>
-        <Text style={styles.subtitle}>credentials are stored only on this device.</Text>
+        <Text style={styles.subtitle}>all of your data is stored locally.</Text>
         <View style={styles.rule} />
 
         {/* Form */}
-        <Text style={styles.label}>registration number</Text>
+        <Text style={styles.label}>vtop username</Text>
         <TextInput
           autoCapitalize="none"
           autoCorrect={false}
           editable={!busy}
           onChangeText={setUsername}
-          placeholder="e.g. 22BCE1234"
+          placeholder="vtop username"
           placeholderTextColor="#444"
           style={styles.input}
           value={username}
         />
 
-        <Text style={styles.label}>password</Text>
+        <Text style={styles.label}>vtop password</Text>
         <TextInput
           editable={!busy}
           onChangeText={setPassword}
@@ -93,7 +109,9 @@ export function LoginScreen({ onSync }: Props) {
             pressed && styles.buttonPressed,
           ]}
         >
-          <Text style={styles.buttonText}>{busy ? "syncing..." : "sync timetable →"}</Text>
+          <Text style={styles.buttonText}>
+            {busy ? "syncing..." : "sync timetable →"}
+          </Text>
         </Pressable>
 
         {/* Status / error output */}
@@ -112,7 +130,10 @@ export function LoginScreen({ onSync }: Props) {
         {/* GitHub link */}
         <Pressable
           onPress={() => Linking.openURL(GITHUB_URL)}
-          style={({ pressed }) => [styles.githubRow, pressed && styles.githubPressed]}
+          style={({ pressed }) => [
+            styles.githubRow,
+            pressed && styles.githubPressed,
+          ]}
         >
           <Text style={styles.githubLink}>↗ view source on github</Text>
         </Pressable>
