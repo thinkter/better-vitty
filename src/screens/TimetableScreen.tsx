@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   FlatList,
@@ -105,6 +105,17 @@ export function TimetableScreen({ timetables, onResync, onSync }: Props) {
     setShowPicker(false);
     dayListRef.current?.scrollToOffset({ offset: idx * width, animated: true });
   }, [width]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      dayListRef.current?.scrollToOffset({
+        offset: dayIdx * width,
+        animated: false,
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [dayIdx, semesterIdx, showPicker, width]);
 
   const syncTimetables = useCallback(async () => {
     if (syncing) return;
@@ -261,6 +272,7 @@ export function TimetableScreen({ timetables, onResync, onSync }: Props) {
       <Animated.FlatList
         ref={dayListRef}
         data={DAY_ORDER}
+        extraData={`${semesterIdx}:${dayIdx}:${showPicker}`}
         horizontal
         pagingEnabled
         snapToInterval={width}
@@ -269,6 +281,7 @@ export function TimetableScreen({ timetables, onResync, onSync }: Props) {
         disableIntervalMomentum
         bounces={false}
         overScrollMode="never"
+        removeClippedSubviews={false}
         showsHorizontalScrollIndicator={false}
         initialScrollIndex={dayIdx}
         getItemLayout={(_, index) => ({
