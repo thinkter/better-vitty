@@ -20,6 +20,19 @@ interface StoredCookie {
 
 const DEFAULT_BASE_URL = "https://vtop.vit.ac.in";
 
+const BROWSER_HEADERS: Readonly<Record<string, string>> = {
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Cache-Control": "max-age=0",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+};
+
 function splitSetCookie(header: string): string[] {
   const values: string[] = [];
   let start = 0;
@@ -102,8 +115,7 @@ export class VtopClient {
     const url = this.absoluteUrl(path);
     const cookie = this.cookieHeader();
     const requestHeaders: Record<string, string> = {
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "User-Agent": "Mozilla/5.0 BetterVitty/0.1 Expo",
+      ...BROWSER_HEADERS,
       ...(cookie ? { Cookie: cookie } : {}),
     };
     if (headers) {

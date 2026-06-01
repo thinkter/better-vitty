@@ -36,6 +36,26 @@ describe("VtopClient", () => {
     expect(client.cookieHeader()).toContain("SERVERID=s1");
   });
 
+  it("sends browser-like request headers without Expo identifiers", async () => {
+    let headers = new Headers();
+    const client = new VtopClient({
+      fetchImpl: async (_url, init) => {
+        headers = new Headers(init?.headers);
+        return response("ok");
+      },
+    });
+
+    await client.get("/vtop/login");
+
+    expect(headers.get("user-agent")).toBe(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    );
+    expect(headers.get("user-agent")?.toLowerCase()).not.toContain("expo");
+    expect(headers.get("accept")).toContain("text/html");
+    expect(headers.get("accept-language")).toBe("en-US,en;q=0.9");
+    expect(headers.get("upgrade-insecure-requests")).toBe("1");
+  });
+
   it("maps HTTP blocking responses to typed VTOP errors", async () => {
     const client = new VtopClient({
       fetchImpl: async () => response("blocked", { status: 403 }),
