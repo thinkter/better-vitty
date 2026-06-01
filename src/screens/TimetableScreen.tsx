@@ -1,10 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import {
-  Alert,
+  Animated,
   FlatList,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   View,
@@ -79,30 +78,6 @@ function findCourse(
   return courses.find((c) => c.code === code);
 }
 
-function buildShareText(timetable: SemesterTimetable): string {
-  const lines: string[] = [
-    timetable.semester.name,
-    `synced: ${timetable.fetchedAt.slice(0, 10)}`,
-    "",
-  ];
-  for (const day of DAY_ORDER) {
-    const events = eventsForDay(timetable.events, day);
-    if (events.length === 0) continue;
-    lines.push(day);
-    for (const ev of events) {
-      const course = findCourse(timetable.courses, ev.courseCode);
-      const timeLabel = resolveTime(ev);
-      lines.push(`  ${timeLabel}  ${ev.courseCode}  ${course?.title ?? ""}`);
-      const meta = [ev.venue || course?.venue, course?.faculty]
-        .filter(Boolean)
-        .join("  ");
-      if (meta) lines.push(`  ${meta}`);
-    }
-    lines.push("");
-  }
-  return lines.join("\n");
-}
-
 interface Props {
   timetables: SemesterTimetable[];
   onResync: () => void;
@@ -110,46 +85,34 @@ interface Props {
 
 export function TimetableScreen({ timetables, onResync }: Props) {
   const { width } = useWindowDimensions();
+  const initialDayIdx = useRef(getCurrentDayIdx()).current;
   const [semesterIdx, setSemesterIdx] = useState(0);
-  const [dayIdx, setDayIdx] = useState(getCurrentDayIdx);
+  const [dayIdx, setDayIdx] = useState(initialDayIdx);
   const [showPicker, setShowPicker] = useState(false);
   const dayListRef = useRef<FlatList<Day>>(null);
+  const scrollX = useRef(new Animated.Value(initialDayIdx * width)).current;
+  const tabWidth = width / DAY_ORDER.length;
 
   const timetable = timetables[semesterIdx];
 
   const selectDay = useCallback((idx: number) => {
-    setDayIdx(idx);
     setShowPicker(false);
     dayListRef.current?.scrollToIndex({ index: idx, animated: true });
   }, []);
 
   const handleScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+      const idx = Math.max(0, Math.min(DAY_ORDER.length - 1, Math.round(e.nativeEvent.contentOffset.x / width)));
       if (idx !== dayIdx) setDayIdx(idx);
     },
     [dayIdx, width],
   );
 
-  async function handleShare() {
-    if (!timetable) return;
-    try {
-      await Share.share({
-        message: buildShareText(timetable),
-        title: timetable.semester.name,
-      });
-    } catch {
-      // dismissed
-    }
-  }
-
-  function handleWidget() {
-    Alert.alert(
-      "home screen widgets",
-      "widget support is coming soon.\n\niOS: long-press home screen → add widget → Better Vitty\nAndroid: long-press home screen → Widgets → Better Vitty",
-      [{ text: "got it" }],
-    );
-  }
+  const dayIndicatorTranslateX = scrollX.interpolate({
+    inputRange: DAY_ORDER.map((_, idx) => idx * width),
+    outputRange: DAY_ORDER.map((_, idx) => idx * tabWidth),
+    extrapolate: "clamp",
+  });
 
   if (!timetable) {
     return (
@@ -170,35 +133,15 @@ export function TimetableScreen({ timetables, onResync }: Props) {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.brand}>better-vitty</Text>
-          <View style={styles.actions}>
-            <Pressable
-              onPress={handleWidget}
-              style={({ pressed }) => [
-                styles.actionBtn,
-                pressed && styles.actionBtnPressed,
-              ]}
-            >
-              <Text style={styles.actionBtnText}>[widget]</Text>
-            </Pressable>
-            <Pressable
-              onPress={handleShare}
-              style={({ pressed }) => [
-                styles.actionBtn,
-                pressed && styles.actionBtnPressed,
-              ]}
-            >
-              <Text style={styles.actionBtnText}>[share]</Text>
-            </Pressable>
-            <Pressable
-              onPress={onResync}
-              style={({ pressed }) => [
-                styles.actionBtn,
-                pressed && styles.actionBtnPressed,
-              ]}
-            >
-              <Text style={styles.actionBtnText}>[↺]</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={onResync}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              pressed && styles.actionBtnPressed,
+            ]}
+          >
+            <Text style={styles.actionBtnText}>[↺]</Text>
+          </Pressable>
         </View>
 
         {/* Semester selector */}
@@ -248,11 +191,17 @@ export function TimetableScreen({ timetables, onResync }: Props) {
 
       {/* ── Day tabs ── */}
       <View style={styles.dayTabsOuter}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dayTabs}
-        >
+        <View style={styles.dayTabs}>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.dayIndicator,
+              {
+                width: tabWidth,
+                transform: [{ translateX: dayIndicatorTranslateX }],
+              },
+            ]}
+          />
           {DAY_ORDER.map((day, idx) => {
             const active = idx === dayIdx;
             const hasClasses = eventsForDay(timetable.events, day).length > 0;
@@ -260,27 +209,27 @@ export function TimetableScreen({ timetables, onResync }: Props) {
               <Pressable
                 key={day}
                 onPress={() => selectDay(idx)}
-                style={styles.dayTab}
+                style={[styles.dayTab, { width: tabWidth }]}
               >
                 <Text
                   style={[
                     styles.dayTabText,
-                    active && styles.dayTabActive,
                     !hasClasses && styles.dayTabEmpty,
+                    active && styles.dayTabActive,
                   ]}
                 >
-                  {active ? `[${day}]` : day}
+                  {day}
                 </Text>
               </Pressable>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
 
       <View style={styles.rule} />
 
       {/* ── Swipeable day content ── */}
-      <FlatList
+      <Animated.FlatList
         ref={dayListRef}
         data={DAY_ORDER}
         horizontal
@@ -293,6 +242,10 @@ export function TimetableScreen({ timetables, onResync }: Props) {
           index,
         })}
         keyExtractor={(day) => day}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+          { useNativeDriver: true },
+        )}
         onMomentumScrollEnd={handleScrollEnd}
         scrollEventThrottle={16}
         style={styles.dayList}
@@ -400,11 +353,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
   },
-  actions: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
   actionBtn: {
     paddingVertical: 4,
     paddingHorizontal: 2,
@@ -455,16 +403,25 @@ const styles = StyleSheet.create({
 
   // ── day tabs ──
   dayTabsOuter: {
-    paddingLeft: 8,
+    width: "100%",
   },
   dayTabs: {
-    paddingHorizontal: 12,
-    gap: 4,
+    position: "relative",
+    flexDirection: "row",
     alignItems: "center",
+    width: "100%",
+  },
+  dayIndicator: {
+    position: "absolute",
+    left: 0,
+    bottom: 0,
+    height: 1,
+    backgroundColor: "#fff",
   },
   dayTab: {
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
   },
   dayTabText: {
     color: "#444",
