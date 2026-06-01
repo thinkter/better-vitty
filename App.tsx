@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import type { Screen, SemesterTimetable } from "./src/lib/types";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { TimetableScreen } from "./src/screens/TimetableScreen";
+import { FriendsScreen } from "./src/screens/FriendsScreen";
+import { ShareTimetableScreen } from "./src/screens/ShareTimetableScreen";
 import {
   deleteCredentials,
   loadCredentials,
@@ -15,6 +17,56 @@ import { asVtopError } from "./src/vtop/errors";
 import { syncTimetablesFromVtop } from "./src/vtop/syncTimetables";
 
 const MONO = "monospace";
+type AppTab = "my timetable" | "friends";
+
+interface AppShellProps {
+  readonly timetables: SemesterTimetable[];
+  readonly onResync: () => void;
+  readonly onSync: (onStatus?: (status: string) => void) => Promise<void>;
+}
+
+function AppShell({ timetables, onResync, onSync }: AppShellProps) {
+  const [tab, setTab] = useState<AppTab>("my timetable");
+  const [sharing, setSharing] = useState(false);
+
+  if (sharing) {
+    return <ShareTimetableScreen timetables={timetables} onBack={() => setSharing(false)} />;
+  }
+
+  return (
+    <View style={styles.appShell}>
+      <View style={styles.appContent}>
+        {tab === "my timetable" ? (
+          <TimetableScreen
+            timetables={timetables}
+            onResync={onResync}
+            onSync={onSync}
+            onShare={() => setSharing(true)}
+          />
+        ) : (
+          <FriendsScreen />
+        )}
+      </View>
+      <View style={styles.tabBar}>
+        {(["my timetable", "friends"] as const).map((item) => (
+          <Pressable
+            key={item}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === item }}
+            onPress={() => setTab(item)}
+            style={({ pressed }) => [styles.tabBtn, pressed && styles.tabBtnPressed]}
+          >
+            <Text style={[styles.tabText, tab === item && styles.tabTextActive]}>
+              {tab === item ? "> " : ""}
+              {item}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 
 function BootScreen() {
   return (
@@ -41,7 +93,7 @@ export default function App() {
       if (!onboarded) {
         setScreen("onboarding");
       } else if (saved.length > 0) {
-        setScreen("timetable");
+        setScreen("app");
       } else {
         setScreen("login");
       }
@@ -58,7 +110,7 @@ export default function App() {
 
   function handleSync(fetched: SemesterTimetable[]) {
     setTimetables(fetched);
-    setScreen("timetable");
+    setScreen("app");
   }
 
   function handleResync() {
@@ -93,8 +145,8 @@ export default function App() {
         <OnboardingScreen onComplete={() => setScreen("login")} />
       )}
       {screen === "login" && <LoginScreen onSync={handleSync} />}
-      {screen === "timetable" && (
-        <TimetableScreen
+      {screen === "app" && (
+        <AppShell
           timetables={timetables}
           onResync={handleResync}
           onSync={handleStoredCredentialSync}
@@ -108,6 +160,35 @@ const styles = StyleSheet.create({
   provider: {
     flex: 1,
     backgroundColor: "#000",
+  },
+  appShell: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  appContent: {
+    flex: 1,
+  },
+  tabBar: {
+    flexDirection: "row",
+    borderTopColor: "#111",
+    borderTopWidth: 1,
+    backgroundColor: "#000",
+  },
+  tabBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+  tabBtnPressed: {
+    backgroundColor: "#0d0d0d",
+  },
+  tabText: {
+    color: "#555",
+    fontFamily: MONO,
+    fontSize: 12,
+  },
+  tabTextActive: {
+    color: "#fff",
   },
   boot: {
     flex: 1,

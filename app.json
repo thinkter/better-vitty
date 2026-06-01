@@ -15,7 +15,19 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Better Vitty to scan timetable QR codes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Better Vitty to import timetable QR images."
+        }
+      ]
     ]
   }
 }
