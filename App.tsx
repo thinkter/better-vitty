@@ -1,127 +1,92 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { appStyles as styles } from "./src/lib/appStyles";
-import type { AppPhase, SemesterTimetable } from "./src/lib/types";
-import { loadTimetables, saveTimetables } from "./src/storage/timetableStore";
-import { VtopClient } from "./src/vtop/client";
-import { asVtopError } from "./src/vtop/errors";
-import { loginToVtop } from "./src/vtop/login";
-import { fetchAllTimetables } from "./src/vtop/timetable";
+import { useEffect, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import type { Screen, SemesterTimetable } from "./src/lib/types";
+import { OnboardingScreen } from "./src/screens/OnboardingScreen";
+import { LoginScreen } from "./src/screens/LoginScreen";
+import { TimetableScreen } from "./src/screens/TimetableScreen";
+import { isOnboardingComplete } from "./src/storage/onboardingStore";
+import { loadTimetables } from "./src/storage/timetableStore";
 
+const MONO = "monospace";
 
-function renderTimetables(timetables: readonly SemesterTimetable[]): string {
-  if (timetables.length === 0) return "no saved timetables\nlogin and sync to fetch VTOP data";
-  return timetables
-    .map((timetable) => {
-      const courses = timetable.courses
-        .slice(0, 20)
-        .map((course) => `  ${course.code.padEnd(9)} ${course.title}${course.slot ? ` [${course.slot}]` : ""}`)
-        .join("\n");
-      const events = timetable.events
-        .slice(0, 30)
-        .map((event) => `  ${event.day.padEnd(9)} ${event.time.padEnd(13)} ${event.courseCode} ${event.venue}`)
-        .join("\n");
-      return `$ ${timetable.semester.name}\nfetched: ${timetable.fetchedAt}\ncourses:\n${courses || "  none parsed"}\nevents:\n${events || "  none parsed"}`;
-    })
-    .join("\n\n");
+function BootScreen() {
+  return (
+    <View style={styles.boot}>
+      <Text style={styles.bootText}>loading...</Text>
+    </View>
+  );
 }
 
 export default function App() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [phase, setPhase] = useState<AppPhase>("loading");
-  const [status, setStatus] = useState("loading local store");
-  const [error, setError] = useState("");
+  const [screen, setScreen] = useState<Screen>("boot");
   const [timetables, setTimetables] = useState<SemesterTimetable[]>([]);
 
   useEffect(() => {
     let alive = true;
-    loadTimetables()
-      .then((saved) => {
-        if (!alive) return;
-        setTimetables(saved);
-        setStatus(saved.length ? "saved timetables loaded" : "ready");
-        setPhase("idle");
-      })
-      .catch((err) => {
-        if (!alive) return;
-        setError(err instanceof Error ? err.message : "failed to load local store");
-        setPhase("error");
-      });
+
+    async function boot() {
+      const [onboarded, saved] = await Promise.all([
+        isOnboardingComplete(),
+        loadTimetables(),
+      ]);
+      if (!alive) return;
+      setTimetables(saved);
+      if (!onboarded) {
+        setScreen("onboarding");
+      } else if (saved.length > 0) {
+        setScreen("timetable");
+      } else {
+        setScreen("login");
+      }
+    }
+
+    boot().catch(() => {
+      if (alive) setScreen("login");
+    });
+
     return () => {
       alive = false;
     };
   }, []);
 
-  const output = useMemo(() => renderTimetables(timetables), [timetables]);
-  const busy = phase === "loading" || phase === "syncing";
+  function handleSync(fetched: SemesterTimetable[]) {
+    setTimetables(fetched);
+    setScreen("timetable");
+  }
 
-  async function sync() {
-    setPhase("syncing");
-    setError("");
-    const client = new VtopClient();
-    try {
-      const login = await loginToVtop(client, {
-        username: username.trim(),
-        password,
-        onStatus: setStatus,
-      });
-      setStatus(`logged in after ${login.attempts} captcha attempt(s)`);
-      const fetched = await fetchAllTimetables(client, login.session, { onStatus: setStatus });
-      await saveTimetables(fetched);
-      setTimetables(fetched);
-      setStatus(`saved ${fetched.length} semester timetable(s) locally`);
-      setPhase("done");
-    } catch (err) {
-      const vtopError = asVtopError(err);
-      setError(`${vtopError.code}: ${vtopError.message}`);
-      setStatus("sync failed; saved data retained");
-      setPhase("error");
-    }
+  function handleResync() {
+    setScreen("login");
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>better-vitty</Text>
-        <Text style={styles.line}>local-only VTOP timetable sync</Text>
-        <Text style={styles.prompt}>username</Text>
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!busy}
-          onChangeText={setUsername}
-          placeholder="VTOP username"
-          placeholderTextColor="#777"
-          style={styles.input}
-          value={username}
-        />
-        <Text style={styles.prompt}>password</Text>
-        <TextInput
-          editable={!busy}
-          onChangeText={setPassword}
-          placeholder="VTOP password"
-          placeholderTextColor="#777"
-          secureTextEntry
-          style={styles.input}
-          value={password}
-        />
-        <Pressable
-          accessibilityRole="button"
-          disabled={busy || username.trim().length === 0 || password.length === 0}
-          onPress={sync}
-          style={({ pressed }) => [styles.button, (busy || username.trim().length === 0 || password.length === 0) && styles.disabled, pressed && styles.pressed]}
-        >
-          <Text style={styles.buttonText}>{busy ? "working..." : "sync timetable"}</Text>
-        </Pressable>
-        <Text style={styles.status}>$ {status}</Text>
-        {error ? <Text style={styles.error}>! {error}</Text> : null}
-        <View style={styles.outputBox}>
-          <Text selectable style={styles.output}>{output}</Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <SafeAreaProvider style={styles.provider}>
+      {screen === "boot" && <BootScreen />}
+      {screen === "onboarding" && (
+        <OnboardingScreen onComplete={() => setScreen("login")} />
+      )}
+      {screen === "login" && <LoginScreen onSync={handleSync} />}
+      {screen === "timetable" && (
+        <TimetableScreen timetables={timetables} onResync={handleResync} />
+      )}
+    </SafeAreaProvider>
   );
 }
 
+const styles = StyleSheet.create({
+  provider: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  boot: {
+    flex: 1,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bootText: {
+    color: "#333",
+    fontFamily: MONO,
+    fontSize: 13,
+  },
+});

@@ -88,9 +88,10 @@ function rowCells(rowHtml: string): string[] {
 
 function tableRows(html: string): string[][] {
   const rows: string[][] = [];
+  const withoutComments = html.replace(/<!--[\s\S]*?-->/g, "");
   const rowRegex = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
   let match: RegExpExecArray | null;
-  while ((match = rowRegex.exec(html)) !== null) {
+  while ((match = rowRegex.exec(withoutComments)) !== null) {
     const cells = rowCells(match[1] ?? "");
     if (cells.length > 0) rows.push(cells);
   }
@@ -140,29 +141,181 @@ export function parseCourses(html: string): Course[] {
   return courses;
 }
 
-function findCourseCode(value: string): string {
-  return COURSE_CODE_PATTERN.exec(value)?.[0] ?? "";
+const DAY_PATTERN = /^(MON|TUE|WED|THU|FRI|SAT|SUN|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i;
+const SLOT_PATTERN = /(?:^|[^A-Z0-9])((?:L\d+|T?[A-G]{1,2}\d))(?:$|[^A-Z0-9])/i;
+const TRAILING_CLASS_MARKER_PATTERN = /^(?:ALL\d*|NIL|GENERAL|REGULAR)$/i;
+
+interface EventCellParts {
+  readonly kind: string;
+  readonly slot: string;
+  readonly courseCode: string;
+  readonly venue: string;
+}
+
+interface TimeBand {
+  readonly start: string;
+  readonly end: string;
+}
+
+interface TimeBands {
+  readonly theory: readonly TimeBand[];
+  readonly lab: readonly TimeBand[];
+}
+
+
+function findDay(cells: readonly string[]): string {
+  return cells.find((cell) => DAY_PATTERN.test(cell)) ?? "";
+}
+
+function findSlot(value: string): string {
+  return SLOT_PATTERN.exec(value)?.[1] ?? "";
+}
+
+function isLikelyCourseCode(code: string): boolean {
+  return /^[A-Z]{2,}\d{4,}[A-Z]?$/i.test(code) || /^[A-Z]{2,}\d{3,}[A-Z]$/i.test(code);
+}
+
+function hasLikelyCourseCode(value: string): boolean {
+  const match = COURSE_CODE_PATTERN.exec(value);
+  return Boolean(match && isLikelyCourseCode(match[0]));
+}
+
+function findKind(value: string): string {
+  const token = /(?:^|-|\s)(TH|ETH|ELA|LO|LAB|SS)(?=$|-|\s)/i.exec(value)?.[1]?.toUpperCase() ?? "";
+  if (token === "TH" || token === "ETH") return "Theory";
+  if (token === "LO" || token === "LAB" || token === "ELA") return "Lab";
+  if (token === "SS") return "Soft Skill";
+  if (/theory/i.test(value)) return "Theory";
+  if (/lab/i.test(value)) return "Lab";
+  return "";
+}
+
+function parseEventCell(value: string): EventCellParts | null {
+  const courseMatch = COURSE_CODE_PATTERN.exec(value);
+  if (!courseMatch) return null;
+  if (!isLikelyCourseCode(courseMatch[0])) return null;
+
+  const slot = findSlot(value);
+  const kind = findKind(value);
+  const afterCode = value.slice((courseMatch.index ?? 0) + courseMatch[0].length).trim();
+  const hasCourseCellShape = Boolean(slot || kind || /^-\s*\S/.test(afterCode) || value.trim() === courseMatch[0]);
+  if (!hasCourseCellShape) return null;
+
+  const parts = value.split("-").map((part) => part.trim()).filter(Boolean);
+  const coursePartIndex = parts.findIndex((part) => part.includes(courseMatch[0]));
+  const kindPartIndex = parts.findIndex((part, index) => index > coursePartIndex && Boolean(findKind(part)));
+  const venueParts = kindPartIndex === -1 ? [] : parts.slice(kindPartIndex + 1);
+  while (venueParts.length > 0 && TRAILING_CLASS_MARKER_PATTERN.test(venueParts[venueParts.length - 1] ?? "")) {
+    venueParts.pop();
+  }
+
+  return {
+    kind,
+    slot,
+    courseCode: courseMatch[0],
+    venue: venueParts.join("-"),
+  };
+}
+
+function findNearestSlot(cells: readonly string[], courseCellIndex: number): string {
+  for (let index = courseCellIndex - 1; index >= 0; index -= 1) {
+    const cell = cells[index] ?? "";
+    if (hasLikelyCourseCode(cell)) continue;
+    const slot = findSlot(cell);
+    if (slot) return slot;
+  }
+
+  for (let index = courseCellIndex + 1; index < cells.length; index += 1) {
+    const cell = cells[index] ?? "";
+    if (hasLikelyCourseCode(cell)) continue;
+    const slot = findSlot(cell);
+    if (slot) return slot;
+  }
+
+  return "";
+}
+
+function findVenueAfterCourse(cells: readonly string[], courseCellIndex: number): string {
+  for (let index = courseCellIndex + 1; index < cells.length; index += 1) {
+    const cell = cells[index] ?? "";
+    if (
+      !cell ||
+      DAY_PATTERN.test(cell) ||
+      /\d{1,2}:\d{2}/.test(cell) ||
+      findKind(cell) ||
+      findSlot(cell) ||
+      hasLikelyCourseCode(cell)
+    ) continue;
+    return cell;
+  }
+  return "";
+}
+
+function buildTimeBands(startRow: readonly string[] | undefined, endRow: readonly string[] | undefined): TimeBand[] {
+  if (!startRow || !endRow) return [];
+  const starts = startRow.slice(2);
+  const ends = endRow.slice(1);
+  const length = Math.min(starts.length, ends.length);
+  const bands: TimeBand[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const start = starts[index] ?? "";
+    const end = ends[index] ?? "";
+    bands.push({ start, end });
+  }
+  return bands;
+}
+
+function parseTimeBands(rows: readonly string[][]): TimeBands {
+  const theoryStartIndex = rows.findIndex((cells) => /^THEORY$/i.test(cells[0] ?? "") && /^Start$/i.test(cells[1] ?? ""));
+  const labStartIndex = rows.findIndex((cells) => /^LAB$/i.test(cells[0] ?? "") && /^Start$/i.test(cells[1] ?? ""));
+  return {
+    theory: buildTimeBands(rows[theoryStartIndex], rows[theoryStartIndex + 1]),
+    lab: buildTimeBands(rows[labStartIndex], rows[labStartIndex + 1]),
+  };
+}
+
+function timeForBand(bands: TimeBands, kind: string, dataIndex: number): string {
+  const source = /^lab$/i.test(kind) ? bands.lab : bands.theory;
+  const band = source[dataIndex];
+  if (!band || !band.start || !band.end || band.start === "-" || band.end === "-" || /^Lunch$/i.test(band.start)) return "";
+  return `${band.start} - ${band.end}`;
 }
 
 export function parseTimetableEvents(html: string): TimetableEvent[] {
+  const rows = tableRows(html);
+  const bands = parseTimeBands(rows);
   const events: TimetableEvent[] = [];
-  for (const cells of tableRows(html)) {
-    if (cells.length < 4) continue;
-    const day = cells.find((cell) => /^(MON|TUE|WED|THU|FRI|SAT|SUN|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i.test(cell)) ?? "";
+  let currentDay = "";
+
+  for (const cells of rows) {
+    const explicitDay = findDay(cells);
+    if (explicitDay) currentDay = explicitDay;
+    const day = explicitDay || currentDay;
     if (!day) continue;
-    const kind = cells.find((cell) => /theory|lab/i.test(cell)) ?? "";
-    const codeCell = cells.find((cell) => findCourseCode(cell));
-    if (!codeCell) continue;
-    const raw = cells.join(" | ");
-    events.push({
-      day,
-      kind,
-      time: cells.find((cell) => /\d{1,2}:\d{2}/.test(cell)) ?? "",
-      slot: cells.find((cell) => /^(?:[A-Z]\d?|L\d+)(?:\+|-|$)/.test(cell)) ?? "",
-      courseCode: findCourseCode(codeCell),
-      venue: cells.find((cell) => /[A-Z]{2,}-?\d{2,}|SJT|TT|PRP|MB|SMV|ONLINE/i.test(cell)) ?? "",
-      raw,
-    });
+
+    const kindCellIndex = cells.findIndex((cell) => /^(THEORY|LAB)$/i.test(cell));
+    const kindCell = kindCellIndex === -1 ? "" : (cells[kindCellIndex] ?? "");
+    const rowKind = kindCell || cells.find((cell) => /theory|lab/i.test(cell)) || "";
+    const rowTime = cells.find((cell) => /\d{1,2}:\d{2}/.test(cell)) ?? "";
+    const rowSlot = cells.find(findSlot) ?? "";
+    const dataStartIndex = kindCellIndex === -1 ? 0 : kindCellIndex + 1;
+
+    for (let index = 0; index < cells.length; index += 1) {
+      const parsed = parseEventCell(cells[index] ?? "");
+      if (!parsed) continue;
+      const isSeparateCourseCell = !parsed.slot && !parsed.kind;
+      const effectiveKind = parsed.kind || findKind(rowKind);
+      const dataIndex = index - dataStartIndex;
+      events.push({
+        day,
+        kind: effectiveKind,
+        time: rowTime || (dataIndex >= 0 ? timeForBand(bands, effectiveKind, dataIndex) : ""),
+        slot: parsed.slot || (isSeparateCourseCell ? findNearestSlot(cells, index) : findSlot(rowSlot)),
+        courseCode: parsed.courseCode,
+        venue: parsed.venue || findVenueAfterCourse(cells, index),
+        raw: cells.join(" | "),
+      });
+    }
   }
   return events;
 }

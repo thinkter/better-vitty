@@ -10,6 +10,22 @@ const username = process.env.VTOP_USERNAME;
 const password = process.env.VTOP_PASSWORD;
 const runLive = Boolean(username && password);
 
+const DAY_ORDER = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+
+function eventDayIndex(day: string): number {
+  const normalized = day.slice(0, 3).toUpperCase();
+  const index = DAY_ORDER.indexOf(normalized as (typeof DAY_ORDER)[number]);
+  return index === -1 ? DAY_ORDER.length : index;
+}
+
+function formatEvents(events: Awaited<ReturnType<typeof fetchAllTimetables>>[number]["events"]): string {
+  if (events.length === 0) return "  none";
+  return [...events]
+    .sort((a, b) => eventDayIndex(a.day) - eventDayIndex(b.day) || a.time.localeCompare(b.time) || a.slot.localeCompare(b.slot))
+    .map((event) => `  ${event.day} ${event.time || event.slot} ${event.courseCode} ${event.venue}`)
+    .join("\n");
+}
+
 describe.runIf(runLive)("live VTOP timetable sync", () => {
   it(
     "logs in with env credentials and prints fetched timetables",
@@ -44,10 +60,7 @@ describe.runIf(runLive)("live VTOP timetable sync", () => {
             .slice(0, 12)
             .map((course) => `  ${course.code} ${course.title}${course.slot ? ` [${course.slot}]` : ""}`)
             .join("\n");
-          const events = timetable.events
-            .slice(0, 12)
-            .map((event) => `  ${event.day} ${event.time} ${event.courseCode} ${event.venue}`)
-            .join("\n");
+          const events = formatEvents(timetable.events);
           return [`${timetable.semester.name} (${timetable.semester.id})`, "courses:", courses || "  none", "events:", events || "  none"].join("\n");
         })
         .join("\n\n");

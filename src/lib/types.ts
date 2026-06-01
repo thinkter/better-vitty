@@ -44,3 +44,5 @@ export interface LoginResult {
 }
 
 export type AppPhase = "idle" | "loading" | "syncing" | "done" | "error";
+
+export type Screen = "boot" | "onboarding" | "login" | "timetable";
