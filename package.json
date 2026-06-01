@@ -1,0 +1,37 @@
+{
+  "name": "better-vitty",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo/AppEntry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~56.0.13",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "base-64": "^1.0.0",
+    "buffer": "^6.0.3",
+    "expo": "56.0.8",
+    "expo-sqlite": "~56.0.4",
+    "fast-html-parser": "^1.0.1",
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^7.0.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-web": "^0.21.2"
+  },
+  "devDependencies": {
+    "@types/jpeg-js": "^0.3.7",
+    "@types/pngjs": "^6.0.5",
+    "@types/react": "^19.2.15",
+    "dotenv": "^17.4.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Better Vitty",
+    "slug": "better-vitty",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "better-vitty",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-sqlite"
+    ]
+  }
+}
