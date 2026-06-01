@@ -13,6 +13,9 @@ importers:
 
   .:
     dependencies:
+      '@better-vitty/captcha-solver':
+        specifier: workspace:*
+        version: link:packages/captcha-solver
       '@expo/metro-runtime':
         specifier: ~56.0.13
         version: 56.0.13(@expo/log-box@56.0.12)(expo@56.0.8)(react-dom@19.2.3(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.3))(react@19.2.3)
@@ -22,9 +25,6 @@ importers:
       base-64:
         specifier: ^1.0.0
         version: 1.0.0
-      buffer:
-        specifier: ^6.0.3
-        version: 6.0.3
       expo:
         specifier: 56.0.8
         version: 56.0.8(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(@expo/metro-runtime@56.0.13)(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
@@ -34,12 +34,6 @@ importers:
       fast-html-parser:
         specifier: ^1.0.1
         version: 1.0.1
-      fast-png:
-        specifier: ^8.0.0
-        version: 8.0.0(patch_hash=56ce0e3c3b0157919001c80d11324b7589b3f179658512d7cad42ff1fd14d6a9)
-      jpeg-js:
-        specifier: ^0.4.4
-        version: 0.4.4
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -53,9 +47,6 @@ importers:
         specifier: ^0.21.2
         version: 0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
     devDependencies:
-      '@types/jpeg-js':
-        specifier: ^0.3.7
-        version: 0.3.7
       '@types/react':
         specifier: ^19.2.15
         version: 19.2.15
@@ -68,6 +59,22 @@ importers:
       vitest:
         specifier: ^4.1.8
         version: 4.1.8(@types/node@25.9.1)(vite@8.0.16(@types/node@25.9.1)(terser@5.48.0)(yaml@2.9.0))
+
+  packages/captcha-solver:
+    dependencies:
+      buffer:
+        specifier: ^6.0.3
+        version: 6.0.3
+      fast-png:
+        specifier: ^8.0.0
+        version: 8.0.0(patch_hash=56ce0e3c3b0157919001c80d11324b7589b3f179658512d7cad42ff1fd14d6a9)
+      jpeg-js:
+        specifier: ^0.4.4
+        version: 0.4.4
+    devDependencies:
+      '@types/jpeg-js':
+        specifier: ^0.3.7
+        version: 0.3.7
 
 packages:
 

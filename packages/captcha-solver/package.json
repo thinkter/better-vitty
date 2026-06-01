@@ -1,0 +1,17 @@
+{
+  "name": "@better-vitty/captcha-solver",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "fast-png": "^8.0.0",
+    "jpeg-js": "^0.4.4"
+  },
+  "devDependencies": {
+    "@types/jpeg-js": "^0.3.7"
+  }
+}

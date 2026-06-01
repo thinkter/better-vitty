@@ -1,5 +1,5 @@
+import { solveCaptcha } from "@better-vitty/captcha-solver";
 import type { AuthSession, LoginResult } from "../types";
-import { solveCaptcha } from "../captcha/solver";
 import { VtopClient } from "./client";
 import { VtopError } from "./errors";
 import { extractAuthorizedId, extractCaptchaDataUri, extractCsrf, isRecaptchaPage } from "./parser";

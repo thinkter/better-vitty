@@ -1,8 +1,8 @@
 import { config } from "dotenv";
 import { describe, expect, it } from "vitest";
-import { VtopClient } from "./client";
-import { loginToVtop } from "./login";
-import { fetchAllTimetables } from "./timetable";
+import { VtopClient } from "../../src/vtop/client";
+import { loginToVtop } from "../../src/vtop/login";
+import { fetchAllTimetables } from "../../src/vtop/timetable";
 
 config();
 

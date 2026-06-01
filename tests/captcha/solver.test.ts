@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractDataUriParts } from "./solver";
+import { extractDataUriParts } from "@better-vitty/captcha-solver";
 
 describe("captcha data URI parsing", () => {
   it("accepts PNG and JPEG base64 data URIs", () => {

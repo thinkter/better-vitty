@@ -24,12 +24,12 @@ describe("PNG decoding on React Native-like runtimes", () => {
     globalThis.TextDecoder = originalTextDecoder;
   });
 
-  it("imports fast-png without latin1 TextDecoder support", async () => {
-    await expect(import("fast-png")).resolves.toHaveProperty("decode");
+  it("imports the captcha solver package without latin1 TextDecoder support", async () => {
+    await expect(import("@better-vitty/captcha-solver")).resolves.toHaveProperty("decodeImage");
   });
 
   it("decodes PNG captcha images without latin1 TextDecoder support", async () => {
-    const { decodeImage } = await import("./image");
+    const { decodeImage } = await import("@better-vitty/captcha-solver");
 
     const decoded = decodeImage(ONE_PIXEL_PNG_DATA_URI);
 

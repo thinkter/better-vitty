@@ -1,2 +1,5 @@
+packages:
+  - "packages/*"
+
 patchedDependencies:
   fast-png@8.0.0: patches/fast-png@8.0.0.patch

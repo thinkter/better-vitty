@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { VtopClient } from "./client";
-import { VtopError } from "./errors";
+import { VtopClient } from "../../src/vtop/client";
+import { VtopError } from "../../src/vtop/errors";
 
 function response(body: string, init: ResponseInit & { url?: string } = {}): Response {
   const res = new Response(body, init);

@@ -5,7 +5,10 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "types": ["vitest/globals"],
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "paths": {
+      "@better-vitty/captcha-solver": ["./packages/captcha-solver/src/index.ts"]
+    }
   },
-  "include": ["App.tsx", "src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "vitest.config.ts"]
+  "include": ["App.tsx", "src/**/*.ts", "src/**/*.tsx", "packages/*/src/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
 }
