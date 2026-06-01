@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { appStyles as styles } from "./src/lib/appStyles";
 import type { AppPhase, SemesterTimetable } from "./src/lib/types";
 import { loadTimetables, saveTimetables } from "./src/storage/timetableStore";
