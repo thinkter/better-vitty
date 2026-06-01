@@ -1,6 +1,6 @@
 import { Buffer } from "buffer";
 import * as jpeg from "jpeg-js";
-import { PNG } from "pngjs";
+import { decode as decodePng } from "fast-png";
 
 export interface DecodedImage {
   readonly width: number;
@@ -29,8 +29,8 @@ export function decodeImage(dataUri: string): DecodedImage {
 
   const bytes = decodeBase64(parts.base64);
   if (parts.mimeType === "image/png") {
-    const decoded = PNG.sync.read(Buffer.from(bytes));
-    return { width: decoded.width, height: decoded.height, data: decoded.data };
+    const decoded = decodePng(bytes);
+    return { width: decoded.width, height: decoded.height, data: pngToRgba(decoded.data, decoded.channels) };
   }
 
   if (parts.mimeType === "image/jpeg" || parts.mimeType === "image/jpg") {
@@ -39,6 +39,23 @@ export function decodeImage(dataUri: string): DecodedImage {
   }
 
   throw new Error(`unsupported captcha image type: ${parts.mimeType}`);
+}
+
+function pngToRgba(data: Uint8Array | Uint8ClampedArray | Uint16Array, channels: number): Uint8Array | Uint8ClampedArray {
+  if (channels === 4 && !(data instanceof Uint16Array)) return data;
+  const pixels = Math.floor(data.length / channels);
+  const rgba = new Uint8Array(pixels * 4);
+  for (let i = 0, j = 0; i < data.length; i += channels, j += 4) {
+    const r = data[i] ?? 0;
+    const g = data[i + (channels > 2 ? 1 : 0)] ?? r;
+    const b = data[i + (channels > 2 ? 2 : 0)] ?? r;
+    const a = channels === 2 ? (data[i + 1] ?? 255) : channels === 4 ? (data[i + 3] ?? 255) : 255;
+    rgba[j] = r > 255 ? r >> 8 : r;
+    rgba[j + 1] = g > 255 ? g >> 8 : g;
+    rgba[j + 2] = b > 255 ? b >> 8 : b;
+    rgba[j + 3] = a > 255 ? a >> 8 : a;
+  }
+  return rgba;
 }
 
 export function resizeImage(src: DecodedImage, targetW: number, targetH: number): Uint8ClampedArray {
