@@ -102,6 +102,7 @@ export class VtopClient {
       const init: RequestInit = {
         method,
         headers: requestHeaders,
+        credentials: "omit",
         redirect: "manual",
       };
       if (body !== undefined) init.body = body;

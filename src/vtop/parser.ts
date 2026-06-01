@@ -16,20 +16,47 @@ export function cleanText(value: string): string {
   return decodeHtml(value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim());
 }
 
+function attrValue(tag: string, name: string): string | null {
+  const attrRegex = /\s([A-Za-z_:][-A-Za-z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g;
+  let match: RegExpExecArray | null;
+  while ((match = attrRegex.exec(tag)) !== null) {
+    if (match[1]?.toLowerCase() !== name.toLowerCase()) continue;
+    return (match[2] ?? match[3] ?? match[4] ?? "").trim();
+  }
+  return null;
+}
+
 function inputValue(html: string, name: string): string | null {
   const inputRegex = /<input\b[^>]*>/gi;
   let match: RegExpExecArray | null;
   while ((match = inputRegex.exec(html)) !== null) {
     const tag = match[0];
-    const nameMatch = /\bname\s*=\s*["']?([^"'\s>]+)/i.exec(tag);
-    if (nameMatch?.[1] !== name) continue;
-    return /\bvalue\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1]?.trim() ?? "";
+    if (attrValue(tag, "name") !== name) continue;
+    return attrValue(tag, "value") ?? "";
   }
   return null;
 }
 
+export function tryExtractCsrf(html: string): string | null {
+  const input = inputValue(html, "_csrf");
+  if (input) return input;
+
+  const metaRegex = /<meta\b[^>]*>/gi;
+  let metaMatch: RegExpExecArray | null;
+  while ((metaMatch = metaRegex.exec(html)) !== null) {
+    const tag = metaMatch[0];
+    const name = attrValue(tag, "name") ?? attrValue(tag, "id");
+    if (name !== "_csrf") continue;
+    const content = attrValue(tag, "content");
+    if (content) return content;
+  }
+
+  const scriptMatch = /(?:_csrf|csrfToken)\s*[:=]\s*['"]([^'"]+)['"]/i.exec(html);
+  return scriptMatch?.[1]?.trim() || null;
+}
+
 export function extractCsrf(html: string): string {
-  const value = inputValue(html, "_csrf");
+  const value = tryExtractCsrf(html);
   if (!value) throw new VtopError("CSRF_MISSING", "VTOP page did not contain a CSRF token");
   return value;
 }

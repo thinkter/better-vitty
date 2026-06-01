@@ -36,6 +36,20 @@ describe("VtopClient", () => {
     expect(client.cookieHeader()).toContain("SERVERID=s1");
   });
 
+  it("opts out of the platform cookie jar", async () => {
+    let credentials: RequestCredentials | undefined;
+    const client = new VtopClient({
+      fetchImpl: async (_url, init) => {
+        credentials = init?.credentials;
+        return response("ok");
+      },
+    });
+
+    await client.get("/vtop/login");
+
+    expect(credentials).toBe("omit");
+  });
+
   it("sends browser-like request headers without Expo identifiers", async () => {
     let headers = new Headers();
     const client = new VtopClient({

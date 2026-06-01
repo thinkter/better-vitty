@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { Course, SemesterTimetable, TimetableEvent } from "../lib/types";
+import { asVtopError } from "../vtop/errors";
 
 const MONO = "monospace";
 const DAY_ORDER = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
@@ -81,14 +82,18 @@ function findCourse(
 interface Props {
   timetables: SemesterTimetable[];
   onResync: () => void;
+  onSync: (onStatus?: (status: string) => void) => Promise<void>;
 }
 
-export function TimetableScreen({ timetables, onResync }: Props) {
+export function TimetableScreen({ timetables, onResync, onSync }: Props) {
   const { width } = useWindowDimensions();
   const initialDayIdx = useRef(getCurrentDayIdx()).current;
   const [semesterIdx, setSemesterIdx] = useState(0);
   const [dayIdx, setDayIdx] = useState(initialDayIdx);
   const [showPicker, setShowPicker] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("");
+  const [syncError, setSyncError] = useState("");
   const dayListRef = useRef<FlatList<Day>>(null);
   const scrollX = useRef(new Animated.Value(initialDayIdx * width)).current;
   const tabWidth = width / DAY_ORDER.length;
@@ -100,6 +105,22 @@ export function TimetableScreen({ timetables, onResync }: Props) {
     setShowPicker(false);
     dayListRef.current?.scrollToOffset({ offset: idx * width, animated: true });
   }, [width]);
+
+  const syncTimetables = useCallback(async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncError("");
+    setSyncStatus("connecting to vtop...");
+    try {
+      await onSync(setSyncStatus);
+    } catch (err) {
+      const vtopError = asVtopError(err);
+      setSyncError(`${vtopError.code}: ${vtopError.message}`);
+      setSyncStatus("sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  }, [onSync, syncing]);
 
   const handleScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -135,13 +156,18 @@ export function TimetableScreen({ timetables, onResync }: Props) {
         <View style={styles.headerRow}>
           <Text style={styles.brand}>better-vitty</Text>
           <Pressable
-            onPress={onResync}
+            accessibilityRole="button"
+            disabled={syncing}
+            onPress={syncTimetables}
             style={({ pressed }) => [
               styles.actionBtn,
+              syncing && styles.actionBtnDisabled,
               pressed && styles.actionBtnPressed,
             ]}
           >
-            <Text style={styles.actionBtnText}>[↺]</Text>
+            <Text style={styles.actionBtnText}>
+              {syncing ? "[syncing]" : "[sync]"}
+            </Text>
           </Pressable>
         </View>
 
@@ -159,6 +185,8 @@ export function TimetableScreen({ timetables, onResync }: Props) {
             {showPicker ? "▲" : "▼"}
           </Text>
         </Pressable>
+        {syncStatus ? <Text style={styles.syncStatus}>$ {syncStatus}</Text> : null}
+        {syncError ? <Text style={styles.syncError}>! {syncError}</Text> : null}
       </View>
 
       {/* ── Semester picker ── */}
@@ -364,6 +392,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 2,
   },
+  actionBtnDisabled: {
+    opacity: 0.45,
+  },
   actionBtnPressed: {
     opacity: 0.5,
   },
@@ -382,6 +413,16 @@ const styles = StyleSheet.create({
     color: "#888",
     fontFamily: MONO,
     fontSize: 12,
+  },
+  syncStatus: {
+    color: "#555",
+    fontFamily: MONO,
+    fontSize: 11,
+  },
+  syncError: {
+    color: "#ff7777",
+    fontFamily: MONO,
+    fontSize: 11,
   },
 
   // ── semester picker ──

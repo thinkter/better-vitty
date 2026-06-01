@@ -10,11 +10,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { AppPhase, SemesterTimetable } from "../lib/types";
-import { saveTimetables } from "../storage/timetableStore";
-import { VtopClient } from "../vtop/client";
+import { saveCredentials } from "../storage/credentialStore";
 import { asVtopError } from "../vtop/errors";
-import { loginToVtop } from "../vtop/login";
-import { fetchAllTimetables } from "../vtop/timetable";
+import { syncTimetablesFromVtop } from "../vtop/syncTimetables";
 
 const MONO = "monospace";
 const GITHUB_URL = "https://github.com/thinkter/better-vitty";
@@ -37,25 +35,18 @@ export function LoginScreen({ onSync }: Props) {
     setPhase("syncing");
     setError("");
     setStatus("connecting to vtop...");
-    const client = new VtopClient();
     try {
-      const login = await loginToVtop(client, {
+      const credentials = {
         username: username.trim(),
         password,
+      };
+      const result = await syncTimetablesFromVtop({
+        ...credentials,
         onStatus: setStatus,
       });
-      setStatus(
-        `authenticated (${login.attempts} captcha attempt${login.attempts === 1 ? "" : "s"})`,
-      );
-      const fetched = await fetchAllTimetables(client, login.session, {
-        onStatus: setStatus,
-      });
-      await saveTimetables(fetched);
-      setStatus(
-        `saved ${fetched.length} semester${fetched.length === 1 ? "" : "s"} to device`,
-      );
+      await saveCredentials(credentials);
       setPhase("done");
-      onSync(fetched);
+      onSync(result.timetables);
     } catch (err) {
       const vtopError = asVtopError(err);
       setError(`${vtopError.code}: ${vtopError.message}`);
@@ -72,7 +63,7 @@ export function LoginScreen({ onSync }: Props) {
       >
         {/* Heading */}
         <Text style={styles.title}>connect to vtop.</Text>
-        <Text style={styles.subtitle}>all of your data is stored locally.</Text>
+        <Text style={styles.subtitle}>credentials are stored securely on this device.</Text>
         <View style={styles.rule} />
 
         {/* Form */}
@@ -122,7 +113,7 @@ export function LoginScreen({ onSync }: Props) {
         <View style={styles.trustBlock}>
           <Text style={styles.trustText}>
             {
-              "the app connects directly to vtop.vit.ac.in from\nyour phone. no proxy, no server, no middleman.\nyour password is never transmitted anywhere else."
+              "the app connects directly to vtop.vit.ac.in from\nyour phone. no proxy, no server, no middleman.\nyour password is kept in secure device storage."
             }
           </Text>
         </View>

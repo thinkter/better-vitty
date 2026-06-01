@@ -29,7 +29,7 @@ const PAGES: Page[] = [
   {
     // title: "no cloud. ever.",
     title: "local first.",
-    body: "your vtop credentials and timetable never leave this phone.\n\nthe app talks directly to vtop.vit.ac.in — the same way your browser does.\n\nno servers in between. no data collected.\nnothing stored. ever.",
+    body: "your vtop credentials and timetable never leave this phone.\n\ncredentials are kept in secure device storage so you can sync again later.\n\nno servers in between. no data collected.\nnothing phoned home. ever.",
     cta: "understood →",
   },
   {

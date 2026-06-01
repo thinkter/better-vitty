@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { VtopError } from "../../src/vtop/errors";
-import { extractCsrf, parseSemesters, parseTimetableHtml } from "../../src/vtop/parser";
+import { extractCsrf, parseSemesters, parseTimetableHtml, tryExtractCsrf } from "../../src/vtop/parser";
 
 const SEMESTER_HTML = `
   <select id="semesterSubId">
@@ -121,5 +121,11 @@ describe("VTOP HTML parsers", () => {
   it("throws typed errors for missing CSRF and empty semesters", () => {
     expect(() => extractCsrf("<html></html>")).toThrow(VtopError);
     expect(() => parseSemesters('<select id="semesterSubId"></select>')).toThrow(VtopError);
+  });
+
+  it("extracts CSRF tokens from VTOP input, meta, and script variants", () => {
+    expect(tryExtractCsrf('<input value=abc123 name="_csrf">')).toBe("abc123");
+    expect(tryExtractCsrf('<meta content="def456" name="_csrf">')).toBe("def456");
+    expect(tryExtractCsrf("<script>const csrfToken = 'ghi789';</script>")).toBe("ghi789");
   });
 });

@@ -3,7 +3,7 @@ import type { AuthSession, LoginResult } from "../lib/types";
 import type { LoginOptions } from "../lib/vtopTypes";
 import { VtopClient } from "./client";
 import { VtopError } from "./errors";
-import { extractAuthorizedId, extractCaptchaDataUri, extractCsrf, isRecaptchaPage } from "./parser";
+import { extractAuthorizedId, extractCaptchaDataUri, extractCsrf, isRecaptchaPage, tryExtractCsrf } from "./parser";
 export type { LoginOptions } from "../lib/vtopTypes";
 
 
@@ -21,11 +21,14 @@ function requiresMandatoryAction(html: string, url: string): boolean {
 
 async function prepareLoginPage(client: VtopClient, options: LoginOptions): Promise<{ csrf: string; captchaDataUri: string }> {
   options.onStatus?.("opening vtop");
+  client.clearSession();
   await client.get("/");
   await client.get("/vtop/");
   const openPage = await client.get("/vtop/openPage");
-  const setupCsrf = extractCsrf(openPage.text);
-  await client.postForm("/vtop/prelogin/setup", { _csrf: setupCsrf, flag: "VTOP" });
+  const setupCsrf = tryExtractCsrf(openPage.text);
+  if (setupCsrf) {
+    await client.postForm("/vtop/prelogin/setup", { _csrf: setupCsrf, flag: "VTOP" });
+  }
 
   const max = options.maxCaptchaPageAttempts ?? 6;
   for (let attempt = 1; attempt <= max; attempt += 1) {
@@ -46,8 +49,8 @@ async function prepareLoginPage(client: VtopClient, options: LoginOptions): Prom
   throw new VtopError("CAPTCHA_UNAVAILABLE", "VTOP did not provide a text captcha");
 }
 
-function sessionFromHtml(html: string): AuthSession {
-  return { csrf: extractCsrf(html), authorizedId: extractAuthorizedId(html) };
+function sessionFromHtml(html: string, fallbackCsrf: string): AuthSession {
+  return { csrf: tryExtractCsrf(html) ?? fallbackCsrf, authorizedId: extractAuthorizedId(html) };
 }
 
 export async function loginToVtop(client: VtopClient, options: LoginOptions): Promise<LoginResult> {
@@ -72,7 +75,7 @@ export async function loginToVtop(client: VtopClient, options: LoginOptions): Pr
 
     if (!/\/vtop\/login/i.test(loginResponse.url) && !isInvalidLogin(loginResponse.text)) {
       const content = loginResponse.text.includes("authorizedID") ? loginResponse : await client.get("/vtop/content");
-      return { session: sessionFromHtml(content.text), attempts: attempt };
+      return { session: sessionFromHtml(content.text, loginPage.csrf), attempts: attempt };
     }
 
     client.clearSession();
