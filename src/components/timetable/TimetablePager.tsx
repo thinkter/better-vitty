@@ -1,21 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  Animated,
-  FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from "react-native";
 import type { Course, SemesterTimetable, TimetableEvent } from "../../lib/types";
 
 const MONO = "monospace";
 export const DAY_ORDER = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
 type Day = (typeof DAY_ORDER)[number];
-const DAYS: Day[] = [...DAY_ORDER];
+const DAYS: readonly Day[] = DAY_ORDER;
+const FALLBACK_DAY: Day = "MON";
 const SLOT_LETTER_ORDER = "ABCDEFG";
 
 function getCurrentDayIdx(): number {
@@ -45,14 +42,44 @@ function resolveTime(ev: TimetableEvent): string {
   return ev.time || ev.slot || "--";
 }
 
-function eventsForDay(events: readonly TimetableEvent[], day: Day): TimetableEvent[] {
-  return events
-    .filter((ev) => ev.day.toUpperCase().startsWith(day))
-    .sort((a, b) => parseEventSortKey(a) - parseEventSortKey(b));
+function emptyDayBuckets(): Record<Day, TimetableEvent[]> {
+  return {
+    MON: [],
+    TUE: [],
+    WED: [],
+    THU: [],
+    FRI: [],
+    SAT: [],
+    SUN: [],
+  };
 }
 
-function findCourse(courses: readonly Course[], code: string): Course | undefined {
-  return courses.find((c) => c.code === code);
+function dayForEvent(event: TimetableEvent): Day | null {
+  const normalized = event.day.trim().toUpperCase();
+  for (const day of DAYS) {
+    if (normalized.startsWith(day)) return day;
+  }
+  return null;
+}
+
+function buildDayEvents(events: readonly TimetableEvent[]): Record<Day, TimetableEvent[]> {
+  const buckets = emptyDayBuckets();
+  for (const event of events) {
+    const day = dayForEvent(event);
+    if (day) buckets[day].push(event);
+  }
+  for (const day of DAYS) {
+    buckets[day].sort((a, b) => parseEventSortKey(a) - parseEventSortKey(b));
+  }
+  return buckets;
+}
+
+function buildCourseMap(courses: readonly Course[]): Map<string, Course> {
+  const map = new Map<string, Course>();
+  for (const course of courses) {
+    if (!map.has(course.code)) map.set(course.code, course);
+  }
+  return map;
 }
 
 interface EventRowProps {
@@ -75,7 +102,7 @@ function EventRow({ event, course, isLast }: EventRowProps) {
         {course?.title ? <Text style={styles.eventTitle}>{course.title}</Text> : null}
         {meta ? <Text style={styles.eventMeta}>{meta}</Text> : null}
       </View>
-      {!isLast && <View style={styles.eventRule} />}
+      {!isLast ? <View style={styles.eventRule} /> : null}
     </View>
   );
 }
@@ -96,7 +123,11 @@ function TimetablePagerHeader({ title, semesterName, showPicker, headerRight, on
         {headerRight}
       </View>
 
-      <Pressable onPress={onTogglePicker} style={({ pressed }) => [styles.semesterBtn, pressed && styles.semesterBtnPressed]}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onTogglePicker}
+        style={({ pressed }) => [styles.semesterBtn, pressed && styles.semesterBtnPressed]}
+      >
         <Text style={styles.semesterName}>{semesterName}  {showPicker ? "▲" : "▼"}</Text>
       </Pressable>
     </View>
@@ -111,39 +142,44 @@ interface SemesterPickerProps {
 
 function SemesterPicker({ timetables, semesterIdx, onSelect }: SemesterPickerProps) {
   return (
-    <FlatList
-      data={timetables}
-      keyExtractor={(item) => item.semester.id}
-      style={styles.picker}
-      renderItem={({ item, index }) => (
-        <Pressable onPress={() => onSelect(index)} style={({ pressed }) => [styles.pickerRow, pressed && styles.pickerRowPressed]}>
+    <ScrollView style={styles.picker} contentContainerStyle={styles.pickerContent}>
+      {timetables.map((timetable, index) => (
+        <Pressable
+          accessibilityRole="button"
+          key={timetable.semester.id || `${timetable.semester.name}-${index}`}
+          onPress={() => onSelect(index)}
+          style={({ pressed }) => [styles.pickerRow, pressed && styles.pickerRowPressed]}
+        >
           <Text style={[styles.pickerText, index === semesterIdx && styles.pickerTextActive]}>
-            {index === semesterIdx ? "> " : "  "}{item.semester.name}
+            {index === semesterIdx ? "> " : "  "}{timetable.semester.name}
           </Text>
         </Pressable>
-      )}
-    />
+      ))}
+    </ScrollView>
   );
 }
 
 interface DayTabsProps {
   readonly activeIdx: number;
-  readonly tabWidth: number;
   readonly dayEventCounts: Record<Day, number>;
-  readonly indicatorTranslateX: Animated.AnimatedInterpolation<string | number>;
   readonly onSelectDay: (index: number) => void;
 }
 
-function DayTabs({ activeIdx, tabWidth, dayEventCounts, indicatorTranslateX, onSelectDay }: DayTabsProps) {
+function DayTabs({ activeIdx, dayEventCounts, onSelectDay }: DayTabsProps) {
   return (
     <View style={styles.dayTabsOuter}>
       <View style={styles.dayTabs}>
-        <Animated.View pointerEvents="none" style={[styles.dayIndicator, { width: tabWidth, transform: [{ translateX: indicatorTranslateX }] }]} />
         {DAYS.map((day, idx) => {
           const active = idx === activeIdx;
           const hasClasses = dayEventCounts[day] > 0;
           return (
-            <Pressable key={day} onPress={() => onSelectDay(idx)} style={[styles.dayTab, { width: tabWidth }]}>
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              key={day}
+              onPress={() => onSelectDay(idx)}
+              style={[styles.dayTab, active && styles.dayTabActiveBox]}
+            >
               <Text style={[styles.dayTabText, !hasClasses && styles.dayTabEmpty, active && styles.dayTabActive]}>{day}</Text>
             </Pressable>
           );
@@ -153,27 +189,39 @@ function DayTabs({ activeIdx, tabWidth, dayEventCounts, indicatorTranslateX, onS
   );
 }
 
-interface DayPageProps {
+interface DayScheduleProps {
   readonly day: Day;
-  readonly timetable: SemesterTimetable;
-  readonly width: number;
+  readonly events: readonly TimetableEvent[];
+  readonly courseMap: ReadonlyMap<string, Course>;
 }
 
-function DayPage({ day, timetable, width }: DayPageProps) {
-  const events = eventsForDay(timetable.events, day);
+function eventKey(event: TimetableEvent, index: number): string {
+  return `${event.day}:${event.courseCode}:${event.slot}:${event.time}:${index}`;
+}
+
+function DaySchedule({ day, events, courseMap }: DayScheduleProps) {
   return (
-    <FlatList
-      data={events}
-      style={[styles.dayPage, { width }]}
-      contentContainerStyle={styles.dayPageContent}
-      keyExtractor={(event, index) => `${event.courseCode}-${event.slot}-${event.time}-${index}`}
-      renderItem={({ item, index }) => <EventRow event={item} course={findCourse(timetable.courses, item.courseCode)} isLast={index === events.length - 1} />}
-      ListEmptyComponent={
+    <ScrollView
+      style={styles.dayScroll}
+      contentContainerStyle={styles.dayContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      {events.length === 0 ? (
         <View style={styles.noClasses}>
           <Text style={styles.noClassesText}>no classes on {day.toLowerCase()}.</Text>
         </View>
-      }
-    />
+      ) : (
+        events.map((event, index) => (
+          <EventRow
+            key={eventKey(event, index)}
+            event={event}
+            course={courseMap.get(event.courseCode)}
+            isLast={index === events.length - 1}
+          />
+        ))
+      )}
+    </ScrollView>
   );
 }
 
@@ -185,44 +233,33 @@ interface TimetablePagerProps {
 }
 
 export function TimetablePager({ timetables, title = "better-vitty", headerRight, emptyAction }: TimetablePagerProps) {
-  const { width } = useWindowDimensions();
   const initialDayIdx = useRef(getCurrentDayIdx()).current;
   const [semesterIdx, setSemesterIdx] = useState(0);
   const [dayIdx, setDayIdx] = useState(initialDayIdx);
   const [showPicker, setShowPicker] = useState(false);
-  const dayListRef = useRef<FlatList<Day>>(null);
-  const scrollX = useRef(new Animated.Value(initialDayIdx * width)).current;
-  const tabWidth = width / DAY_ORDER.length;
   const timetable = timetables[semesterIdx] ?? timetables[0];
 
+  useEffect(() => {
+    if (semesterIdx >= timetables.length && timetables.length > 0) {
+      setSemesterIdx(timetables.length - 1);
+    }
+  }, [semesterIdx, timetables.length]);
+
+  const courseMap = useMemo(() => buildCourseMap(timetable?.courses ?? []), [timetable]);
+  const dayEvents = useMemo(() => buildDayEvents(timetable?.events ?? []), [timetable]);
+  const activeDay: Day = DAYS[dayIdx] ?? FALLBACK_DAY;
+  const activeEvents = dayEvents[activeDay];
+
   const dayEventCounts = useMemo(() => {
-    if (!timetable) return Object.fromEntries(DAYS.map((day) => [day, 0])) as Record<Day, number>;
-    return Object.fromEntries(DAYS.map((day) => [day, eventsForDay(timetable.events, day).length])) as Record<Day, number>;
-  }, [timetable]);
+    const counts = {} as Record<Day, number>;
+    for (const day of DAYS) counts[day] = dayEvents[day].length;
+    return counts;
+  }, [dayEvents]);
 
   const selectDay = useCallback((idx: number) => {
     setDayIdx(idx);
     setShowPicker(false);
-    dayListRef.current?.scrollToOffset({ offset: idx * width, animated: true });
-  }, [width]);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      dayListRef.current?.scrollToOffset({ offset: dayIdx * width, animated: false });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [dayIdx, semesterIdx, showPicker, width]);
-
-  const handleScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const idx = Math.max(0, Math.min(DAY_ORDER.length - 1, Math.round(e.nativeEvent.contentOffset.x / width)));
-    if (idx !== dayIdx) setDayIdx(idx);
-  }, [dayIdx, width]);
-
-  const dayIndicatorTranslateX = scrollX.interpolate({
-    inputRange: DAYS.map((_, idx) => idx * width),
-    outputRange: DAYS.map((_, idx) => idx * tabWidth),
-    extrapolate: "clamp",
-  });
+  }, []);
 
   if (!timetable) {
     return (
@@ -240,10 +277,10 @@ export function TimetablePager({ timetables, title = "better-vitty", headerRight
         semesterName={timetable.semester.name}
         showPicker={showPicker}
         headerRight={headerRight}
-        onTogglePicker={() => setShowPicker((v) => !v)}
+        onTogglePicker={() => setShowPicker((value) => !value)}
       />
 
-      {showPicker && (
+      {showPicker ? (
         <SemesterPicker
           timetables={timetables}
           semesterIdx={semesterIdx}
@@ -252,40 +289,20 @@ export function TimetablePager({ timetables, title = "better-vitty", headerRight
             setShowPicker(false);
           }}
         />
-      )}
+      ) : null}
 
       <DayTabs
         activeIdx={dayIdx}
-        tabWidth={tabWidth}
         dayEventCounts={dayEventCounts}
-        indicatorTranslateX={dayIndicatorTranslateX}
         onSelectDay={selectDay}
       />
 
       <View style={styles.rule} />
 
-      <Animated.FlatList
-        ref={dayListRef}
-        data={DAYS}
-        extraData={`${semesterIdx}:${dayIdx}:${showPicker}`}
-        horizontal
-        pagingEnabled
-        snapToInterval={width}
-        snapToAlignment="start"
-        decelerationRate="fast"
-        disableIntervalMomentum
-        bounces={false}
-        overScrollMode="never"
-        removeClippedSubviews={false}
-        showsHorizontalScrollIndicator={false}
-        initialScrollIndex={dayIdx}
-        getItemLayout={(_, index) => ({ length: width, offset: index * width, index })}
-        keyExtractor={(day) => day}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
-        onMomentumScrollEnd={handleScrollEnd}
-        scrollEventThrottle={8}
-        style={styles.dayList}
-        renderItem={({ item }) => <DayPage day={item} timetable={timetable} width={width} />}
+      <DaySchedule
+        day={activeDay}
+        events={activeEvents}
+        courseMap={courseMap}
       />
     </View>
   );
@@ -302,21 +319,21 @@ const styles = StyleSheet.create({
   semesterBtnPressed: { opacity: 0.6 },
   semesterName: { color: "#888", fontFamily: MONO, fontSize: 12 },
   picker: { borderTopColor: "#1a1a1a", borderTopWidth: 1, borderBottomColor: "#1a1a1a", borderBottomWidth: 1, maxHeight: 220 },
+  pickerContent: { paddingVertical: 2 },
   pickerRow: { paddingVertical: 10, paddingHorizontal: 20 },
   pickerRowPressed: { backgroundColor: "#0d0d0d" },
   pickerText: { color: "#555", fontFamily: MONO, fontSize: 13 },
   pickerTextActive: { color: "#fff" },
   dayTabsOuter: { width: "100%" },
-  dayTabs: { position: "relative", flexDirection: "row", alignItems: "center", width: "100%" },
-  dayIndicator: { position: "absolute", left: 0, bottom: 0, height: 1, backgroundColor: "#fff" },
-  dayTab: { alignItems: "center", justifyContent: "center", paddingVertical: 12 },
+  dayTabs: { flexDirection: "row", alignItems: "stretch", width: "100%" },
+  dayTab: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 12, borderBottomColor: "transparent", borderBottomWidth: 1 },
+  dayTabActiveBox: { borderBottomColor: "#fff" },
   dayTabText: { color: "#444", fontFamily: MONO, fontSize: 13, letterSpacing: 0.5 },
   dayTabActive: { color: "#fff" },
   dayTabEmpty: { color: "#2a2a2a" },
   rule: { height: 1, backgroundColor: "#111" },
-  dayList: { flex: 1 },
-  dayPage: { flex: 1 },
-  dayPageContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40, flexGrow: 1 },
+  dayScroll: { flex: 1 },
+  dayContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40, flexGrow: 1 },
   noClasses: { paddingTop: 40, alignItems: "center" },
   noClassesText: { color: "#2a2a2a", fontFamily: MONO, fontSize: 13 },
   event: { gap: 4, paddingVertical: 18 },
