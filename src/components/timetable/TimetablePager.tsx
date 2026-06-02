@@ -7,10 +7,12 @@ import {
   View,
 } from "react-native";
 import type { Course, SemesterTimetable, TimetableEvent } from "../../lib/types";
+import { usePhoneMetrics } from "../../lib/responsive";
 
 const MONO = "monospace";
 export const DAY_ORDER = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
 type Day = (typeof DAY_ORDER)[number];
+type PhoneMetrics = ReturnType<typeof usePhoneMetrics>;
 const DAYS: readonly Day[] = DAY_ORDER;
 const FALLBACK_DAY: Day = "MON";
 const SLOT_LETTER_ORDER = "ABCDEFG";
@@ -86,21 +88,22 @@ interface EventRowProps {
   readonly event: TimetableEvent;
   readonly course: Course | undefined;
   readonly isLast: boolean;
+  readonly metrics: PhoneMetrics;
 }
 
-function EventRow({ event, course, isLast }: EventRowProps) {
+function EventRow({ event, course, isLast, metrics }: EventRowProps) {
   const kind = resolveKind(event, course);
   const meta = [event.venue || course?.venue, course?.faculty].filter(Boolean).join("  ·  ");
   return (
     <View>
-      <View style={styles.event}>
+      <View style={[styles.event, { gap: metrics.eventGap, paddingVertical: metrics.eventPaddingY }]}>
         <View style={styles.eventTopRow}>
-          <Text style={styles.eventTime}>{resolveTime(event)}</Text>
-          {kind ? <Text style={styles.eventKind}>{kind}</Text> : null}
+          <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.eventTime, { fontSize: metrics.eventTimeFont }]}>{resolveTime(event)}</Text>
+          {kind ? <Text maxFontSizeMultiplier={metrics.fontMultiplier} numberOfLines={1} style={[styles.eventKind, { fontSize: metrics.captionFont }]}>{kind}</Text> : null}
         </View>
-        <Text style={styles.eventCode}>{event.courseCode}</Text>
-        {course?.title ? <Text style={styles.eventTitle}>{course.title}</Text> : null}
-        {meta ? <Text style={styles.eventMeta}>{meta}</Text> : null}
+        <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.eventCode, { fontSize: metrics.eventCodeFont }]}>{event.courseCode}</Text>
+        {course?.title ? <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.eventTitle, { fontSize: metrics.eventBodyFont, lineHeight: metrics.eventTitleLineHeight }]}>{course.title}</Text> : null}
+        {meta ? <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.eventMeta, { fontSize: metrics.eventMetaFont }]}>{meta}</Text> : null}
       </View>
       {!isLast ? <View style={styles.eventRule} /> : null}
     </View>
@@ -113,14 +116,22 @@ interface TimetablePagerHeaderProps {
   readonly showPicker: boolean;
   readonly headerRight?: ReactNode;
   readonly onTogglePicker: () => void;
+  readonly metrics: PhoneMetrics;
 }
 
-function TimetablePagerHeader({ title, semesterName, showPicker, headerRight, onTogglePicker }: TimetablePagerHeaderProps) {
+function TimetablePagerHeader({ title, semesterName, showPicker, headerRight, onTogglePicker, metrics }: TimetablePagerHeaderProps) {
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingHorizontal: metrics.gutter, paddingTop: metrics.headerTop, paddingBottom: metrics.headerBottom, gap: metrics.headerGap }]}>
       <View style={styles.headerRow}>
-        <Text style={styles.brand}>{title}</Text>
-        {headerRight}
+        <Text
+          ellipsizeMode="tail"
+          maxFontSizeMultiplier={metrics.fontMultiplier}
+          numberOfLines={1}
+          style={[styles.brand, { fontSize: metrics.brandFont }]}
+        >
+          {title}
+        </Text>
+        {headerRight ? <View style={styles.headerRight}>{headerRight}</View> : null}
       </View>
 
       <Pressable
@@ -128,7 +139,14 @@ function TimetablePagerHeader({ title, semesterName, showPicker, headerRight, on
         onPress={onTogglePicker}
         style={({ pressed }) => [styles.semesterBtn, pressed && styles.semesterBtnPressed]}
       >
-        <Text style={styles.semesterName}>{semesterName}  {showPicker ? "▲" : "▼"}</Text>
+        <Text
+          ellipsizeMode="tail"
+          maxFontSizeMultiplier={metrics.fontMultiplier}
+          numberOfLines={1}
+          style={[styles.semesterName, { fontSize: metrics.tabFont }]}
+        >
+          {semesterName}  {showPicker ? "▲" : "▼"}
+        </Text>
       </Pressable>
     </View>
   );
@@ -138,9 +156,10 @@ interface SemesterPickerProps {
   readonly timetables: readonly SemesterTimetable[];
   readonly semesterIdx: number;
   readonly onSelect: (index: number) => void;
+  readonly metrics: PhoneMetrics;
 }
 
-function SemesterPicker({ timetables, semesterIdx, onSelect }: SemesterPickerProps) {
+function SemesterPicker({ timetables, semesterIdx, onSelect, metrics }: SemesterPickerProps) {
   return (
     <ScrollView style={styles.picker} contentContainerStyle={styles.pickerContent}>
       {timetables.map((timetable, index) => (
@@ -148,9 +167,9 @@ function SemesterPicker({ timetables, semesterIdx, onSelect }: SemesterPickerPro
           accessibilityRole="button"
           key={timetable.semester.id || `${timetable.semester.name}-${index}`}
           onPress={() => onSelect(index)}
-          style={({ pressed }) => [styles.pickerRow, pressed && styles.pickerRowPressed]}
+          style={({ pressed }) => [styles.pickerRow, { paddingHorizontal: metrics.gutter }, pressed && styles.pickerRowPressed]}
         >
-          <Text style={[styles.pickerText, index === semesterIdx && styles.pickerTextActive]}>
+          <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.pickerText, { fontSize: metrics.eventBodyFont }, index === semesterIdx && styles.pickerTextActive]}>
             {index === semesterIdx ? "> " : "  "}{timetable.semester.name}
           </Text>
         </Pressable>
@@ -163,9 +182,10 @@ interface DayTabsProps {
   readonly activeIdx: number;
   readonly dayEventCounts: Record<Day, number>;
   readonly onSelectDay: (index: number) => void;
+  readonly metrics: PhoneMetrics;
 }
 
-function DayTabs({ activeIdx, dayEventCounts, onSelectDay }: DayTabsProps) {
+function DayTabs({ activeIdx, dayEventCounts, onSelectDay, metrics }: DayTabsProps) {
   return (
     <View style={styles.dayTabsOuter}>
       <View style={styles.dayTabs}>
@@ -178,9 +198,9 @@ function DayTabs({ activeIdx, dayEventCounts, onSelectDay }: DayTabsProps) {
               accessibilityState={{ selected: active }}
               key={day}
               onPress={() => onSelectDay(idx)}
-              style={[styles.dayTab, active && styles.dayTabActiveBox]}
+              style={[styles.dayTab, { minHeight: metrics.minTouchSize, paddingVertical: metrics.dayTabPaddingY }, active && styles.dayTabActiveBox]}
             >
-              <Text style={[styles.dayTabText, !hasClasses && styles.dayTabEmpty, active && styles.dayTabActive]}>{day}</Text>
+              <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.dayTabText, { fontSize: metrics.dayTabFont }, !hasClasses && styles.dayTabEmpty, active && styles.dayTabActive]}>{day}</Text>
             </Pressable>
           );
         })}
@@ -193,23 +213,24 @@ interface DayScheduleProps {
   readonly day: Day;
   readonly events: readonly TimetableEvent[];
   readonly courseMap: ReadonlyMap<string, Course>;
+  readonly metrics: PhoneMetrics;
 }
 
 function eventKey(event: TimetableEvent, index: number): string {
   return `${event.day}:${event.courseCode}:${event.slot}:${event.time}:${index}`;
 }
 
-function DaySchedule({ day, events, courseMap }: DayScheduleProps) {
+function DaySchedule({ day, events, courseMap, metrics }: DayScheduleProps) {
   return (
     <ScrollView
       style={styles.dayScroll}
-      contentContainerStyle={styles.dayContent}
+      contentContainerStyle={[styles.dayContent, { paddingHorizontal: metrics.gutter, paddingTop: metrics.scheduleTop, paddingBottom: metrics.scheduleBottom }]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
       {events.length === 0 ? (
         <View style={styles.noClasses}>
-          <Text style={styles.noClassesText}>no classes on {day.toLowerCase()}.</Text>
+          <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.noClassesText, { fontSize: metrics.eventBodyFont }]}>no classes on {day.toLowerCase()}.</Text>
         </View>
       ) : (
         events.map((event, index) => (
@@ -218,6 +239,7 @@ function DaySchedule({ day, events, courseMap }: DayScheduleProps) {
             event={event}
             course={courseMap.get(event.courseCode)}
             isLast={index === events.length - 1}
+            metrics={metrics}
           />
         ))
       )}
@@ -233,6 +255,7 @@ interface TimetablePagerProps {
 }
 
 export function TimetablePager({ timetables, title = "better-vitty", headerRight, emptyAction }: TimetablePagerProps) {
+  const metrics = usePhoneMetrics();
   const initialDayIdx = useRef(getCurrentDayIdx()).current;
   const [semesterIdx, setSemesterIdx] = useState(0);
   const [dayIdx, setDayIdx] = useState(initialDayIdx);
@@ -278,12 +301,14 @@ export function TimetablePager({ timetables, title = "better-vitty", headerRight
         showPicker={showPicker}
         headerRight={headerRight}
         onTogglePicker={() => setShowPicker((value) => !value)}
+        metrics={metrics}
       />
 
       {showPicker ? (
         <SemesterPicker
           timetables={timetables}
           semesterIdx={semesterIdx}
+          metrics={metrics}
           onSelect={(index) => {
             setSemesterIdx(index);
             setShowPicker(false);
@@ -295,6 +320,7 @@ export function TimetablePager({ timetables, title = "better-vitty", headerRight
         activeIdx={dayIdx}
         dayEventCounts={dayEventCounts}
         onSelectDay={selectDay}
+        metrics={metrics}
       />
 
       <View style={styles.rule} />
@@ -303,6 +329,7 @@ export function TimetablePager({ timetables, title = "better-vitty", headerRight
         day={activeDay}
         events={activeEvents}
         courseMap={courseMap}
+        metrics={metrics}
       />
     </View>
   );
@@ -312,36 +339,37 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#000" },
   emptyScreen: { flex: 1, justifyContent: "center", alignItems: "center", gap: 20, padding: 24 },
   emptyText: { color: "#555", fontFamily: MONO, fontSize: 14 },
-  header: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, gap: 10 },
+  header: {},
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  brand: { color: "#fff", fontFamily: MONO, fontSize: 15, fontWeight: "700" },
-  semesterBtn: { alignSelf: "flex-start" },
+  brand: { color: "#fff", flex: 1, fontFamily: MONO, fontWeight: "700", minWidth: 0 },
+  headerRight: { flexShrink: 0 },
+  semesterBtn: { alignSelf: "flex-start", maxWidth: "100%" },
   semesterBtnPressed: { opacity: 0.6 },
-  semesterName: { color: "#888", fontFamily: MONO, fontSize: 12 },
+  semesterName: { color: "#888", fontFamily: MONO },
   picker: { borderTopColor: "#1a1a1a", borderTopWidth: 1, borderBottomColor: "#1a1a1a", borderBottomWidth: 1, maxHeight: 220 },
   pickerContent: { paddingVertical: 2 },
-  pickerRow: { paddingVertical: 10, paddingHorizontal: 20 },
+  pickerRow: { paddingVertical: 10 },
   pickerRowPressed: { backgroundColor: "#0d0d0d" },
-  pickerText: { color: "#555", fontFamily: MONO, fontSize: 13 },
+  pickerText: { color: "#555", fontFamily: MONO },
   pickerTextActive: { color: "#fff" },
   dayTabsOuter: { width: "100%" },
   dayTabs: { flexDirection: "row", alignItems: "stretch", width: "100%" },
-  dayTab: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 12, borderBottomColor: "transparent", borderBottomWidth: 1 },
+  dayTab: { flex: 1, alignItems: "center", justifyContent: "center", borderBottomColor: "transparent", borderBottomWidth: 1 },
   dayTabActiveBox: { borderBottomColor: "#fff" },
-  dayTabText: { color: "#444", fontFamily: MONO, fontSize: 13, letterSpacing: 0.5 },
+  dayTabText: { color: "#444", fontFamily: MONO, letterSpacing: 0 },
   dayTabActive: { color: "#fff" },
   dayTabEmpty: { color: "#2a2a2a" },
   rule: { height: 1, backgroundColor: "#111" },
   dayScroll: { flex: 1 },
-  dayContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40, flexGrow: 1 },
+  dayContent: { flexGrow: 1 },
   noClasses: { paddingTop: 40, alignItems: "center" },
-  noClassesText: { color: "#2a2a2a", fontFamily: MONO, fontSize: 13 },
-  event: { gap: 4, paddingVertical: 18 },
+  noClassesText: { color: "#2a2a2a", fontFamily: MONO },
+  event: {},
   eventTopRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 },
-  eventTime: { color: "#fff", fontFamily: MONO, fontSize: 13 },
-  eventKind: { color: "#444", fontFamily: MONO, fontSize: 11 },
-  eventCode: { color: "#fff", fontFamily: MONO, fontSize: 14, fontWeight: "700" },
-  eventTitle: { color: "#bbb", fontFamily: MONO, fontSize: 13, lineHeight: 20 },
-  eventMeta: { color: "#bbb", fontFamily: MONO, fontSize: 12, marginTop: 2 },
+  eventTime: { color: "#fff", flexShrink: 0, fontFamily: MONO },
+  eventKind: { color: "#444", flexShrink: 1, fontFamily: MONO, marginLeft: 12, maxWidth: "35%", textAlign: "right" },
+  eventCode: { color: "#fff", fontFamily: MONO, fontWeight: "700" },
+  eventTitle: { color: "#bbb", fontFamily: MONO },
+  eventMeta: { color: "#bbb", fontFamily: MONO, marginTop: 2 },
   eventRule: { height: 1, backgroundColor: "#111" },
 });

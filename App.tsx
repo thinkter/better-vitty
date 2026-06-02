@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import type { Screen, SemesterTimetable } from "./src/lib/types";
+import { usePhoneMetrics } from "./src/lib/responsive";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { TimetableScreen } from "./src/screens/TimetableScreen";
@@ -27,6 +28,7 @@ interface AppShellProps {
 }
 
 function AppShell({ timetables, onResync, onSync }: AppShellProps) {
+  const metrics = usePhoneMetrics();
   const [tab, setTab] = useState<AppTab>("my timetable");
   const [sharing, setSharing] = useState(false);
 
@@ -55,9 +57,9 @@ function AppShell({ timetables, onResync, onSync }: AppShellProps) {
             accessibilityRole="tab"
             accessibilityState={{ selected: tab === item }}
             onPress={() => setTab(item)}
-            style={({ pressed }) => [styles.tabBtn, pressed && styles.tabBtnPressed]}
+            style={({ pressed }) => [styles.tabBtn, { minHeight: metrics.minTouchSize, paddingVertical: metrics.bottomTabPaddingY }, pressed && styles.tabBtnPressed]}
           >
-            <Text style={[styles.tabText, tab === item && styles.tabTextActive]}>
+            <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.tabText, { fontSize: metrics.tabFont }, tab === item && styles.tabTextActive]}>
               {tab === item ? "> " : ""}
               {item}
             </Text>
@@ -187,7 +189,6 @@ const styles = StyleSheet.create({
   tabText: {
     color: "#555",
     fontFamily: MONO,
-    fontSize: 12,
   },
   tabTextActive: {
     color: "#fff",

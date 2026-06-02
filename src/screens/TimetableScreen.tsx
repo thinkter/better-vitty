@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TimetablePager } from "../components/timetable/TimetablePager";
 import type { SemesterTimetable } from "../lib/types";
+import { usePhoneMetrics } from "../lib/responsive";
 import { asVtopError } from "../vtop/errors";
 
 const MONO = "monospace";
@@ -29,19 +30,22 @@ interface TimetableHeaderActionsProps {
 }
 
 function TimetableHeaderActions({ syncing, onShare, onSync }: TimetableHeaderActionsProps) {
+  const metrics = usePhoneMetrics();
+
   return (
-    <View style={styles.headerActions}>
+    <View style={[styles.headerActions, { gap: metrics.compact ? 10 : 14 }]}>
       <Pressable accessibilityRole="button" onPress={onShare} style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}>
-        <Text style={styles.actionBtnText}>[share]</Text>
+        <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.actionBtnText, { fontSize: metrics.actionFont }]}>[share]</Text>
       </Pressable>
       <Pressable accessibilityRole="button" disabled={syncing} onPress={onSync} style={({ pressed }) => [styles.actionBtn, syncing && styles.actionBtnDisabled, pressed && styles.actionBtnPressed]}>
-        <Text style={styles.actionBtnText}>{syncing ? "[syncing]" : "[sync]"}</Text>
+        <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.actionBtnText, { fontSize: metrics.actionFont }]}>{syncing ? "[syncing]" : "[sync]"}</Text>
       </Pressable>
     </View>
   );
 }
 
 export function TimetableScreen({ timetables, onResync, onSync, onShare }: Props) {
+  const metrics = usePhoneMetrics();
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState("");
   const [syncError, setSyncError] = useState("");
@@ -70,8 +74,8 @@ export function TimetableScreen({ timetables, onResync, onSync, onShare }: Props
         emptyAction={<EmptyTimetableAction onResync={onResync} />}
         headerRight={<TimetableHeaderActions syncing={syncing} onShare={onShare} onSync={syncTimetables} />}
       />
-      {syncStatus ? <Text style={styles.syncStatus}>$ {syncStatus}</Text> : null}
-      {syncError ? <Text style={styles.syncError}>! {syncError}</Text> : null}
+      {syncStatus ? <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.syncStatus, { fontSize: metrics.captionFont, paddingHorizontal: metrics.gutter }]}>$ {syncStatus}</Text> : null}
+      {syncError ? <Text maxFontSizeMultiplier={metrics.fontMultiplier} style={[styles.syncError, { fontSize: metrics.captionFont, paddingHorizontal: metrics.gutter }]}>! {syncError}</Text> : null}
     </SafeAreaView>
   );
 }
@@ -80,11 +84,11 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#000" },
   emptyBtn: { borderColor: "#fff", borderWidth: 1, paddingVertical: 12, paddingHorizontal: 20 },
   emptyBtnText: { color: "#fff", fontFamily: MONO, fontSize: 14 },
-  headerActions: { flexDirection: "row", gap: 14 },
+  headerActions: { flexDirection: "row" },
   actionBtn: { paddingVertical: 4, paddingHorizontal: 2 },
   actionBtnDisabled: { opacity: 0.45 },
   actionBtnPressed: { opacity: 0.5 },
-  actionBtnText: { color: "#555", fontFamily: MONO, fontSize: 12 },
-  syncStatus: { color: "#555", fontFamily: MONO, fontSize: 11, paddingHorizontal: 20, paddingBottom: 6 },
-  syncError: { color: "#ff7777", fontFamily: MONO, fontSize: 11, paddingHorizontal: 20, paddingBottom: 6 },
+  actionBtnText: { color: "#555", fontFamily: MONO },
+  syncStatus: { color: "#555", fontFamily: MONO, paddingBottom: 6 },
+  syncError: { color: "#ff7777", fontFamily: MONO, paddingBottom: 6 },
 });
