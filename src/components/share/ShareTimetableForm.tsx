@@ -50,8 +50,8 @@ export function ShareTimetableForm({ displayName, encoded, errorMessage, status,
           )}
         </View>
 
-        <Text style={styles.meta}>{canShare ? `${encoded.length}/${TIMETABLE_SHARE_MAX_BYTES} QR bytes` : "QR unavailable"}</Text>
-        <Text style={styles.note}>privacy: this QR contains your timetable data directly. share it only with people you trust.</Text>
+        <Text style={styles.meta}>{canShare ? `${encoded.length}/${TIMETABLE_SHARE_MAX_BYTES} compressed single-QR bytes` : "QR unavailable"}</Text>
+        <Text style={styles.note}>privacy: this compressed QR contains your latest semester timetable directly. share it only with people you trust.</Text>
 
         <View style={styles.actions}>
           <Pressable disabled={!canShare} onPress={onShare} style={({ pressed }) => [styles.primaryBtn, !canShare && styles.disabled, pressed && styles.pressed]}>

@@ -56,7 +56,9 @@ export interface FriendTimetable {
   readonly timetables: readonly SemesterTimetable[];
 }
 
-export interface TimetableSharePayload {
+export type TimetableSharePayload = TimetableSharePayloadV1 | TimetableSharePayloadV2;
+
+export interface TimetableSharePayloadV1 {
   readonly v: 1;
   readonly n: string;
   readonly x: string;
@@ -92,6 +94,42 @@ export type CompactSemesterTimetable = readonly [
   fetchedAt: string,
   courses: readonly CompactCourse[],
   events: readonly CompactTimetableEvent[],
+];
+export interface TimetableSharePayloadV2 {
+  readonly v: 2;
+  readonly s: readonly string[];
+  readonly n: number;
+  readonly x: number;
+  readonly t: readonly CompactV2SemesterTimetable[];
+}
+
+export type CompactV2Course = readonly [
+  code: number,
+  title: number,
+  type: number,
+  credits: number,
+  classId: number,
+  slot: number,
+  venue: number,
+  faculty: number,
+  status: number,
+];
+
+export type CompactV2TimetableEvent = readonly [
+  day: number,
+  kind: number,
+  time: number,
+  slot: number,
+  courseCode: number,
+  venue: number,
+];
+
+export type CompactV2SemesterTimetable = readonly [
+  semesterId: number,
+  semesterName: number,
+  fetchedAt: number,
+  courses: readonly CompactV2Course[],
+  events: readonly CompactV2TimetableEvent[],
 ];
 
 export interface TimetableShareDecodeResult {
