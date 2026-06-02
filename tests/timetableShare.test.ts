@@ -112,6 +112,7 @@ describe("timetable share codec", () => {
   it("round-trips representative timetable display data with the current v2 format", () => {
     const encoded = encodeTimetableSharePayload({
       displayName: "  Ada   Lovelace ",
+      registrationNumber: "24bci0150",
       exportedAt: "2026-06-01T00:00:00.000Z",
       timetables: [SAMPLE_TIMETABLE],
     });
@@ -120,6 +121,7 @@ describe("timetable share codec", () => {
     const decoded = decodeTimetableSharePayload(encoded);
 
     expect(decoded.displayName).toBe("Ada Lovelace");
+    expect(decoded.registrationNumber).toBe("24BCI0150");
     expect(decoded.exportedAt).toBe("2026-06-01T00:00:00.000Z");
     expect(decoded.timetables).toEqual([displayableTimetable(SAMPLE_TIMETABLE)]);
     expect(decoded.timetables[0]!.courses[0]!.raw).toEqual([]);
@@ -153,6 +155,7 @@ describe("timetable share codec", () => {
       timetables: [SAMPLE_TIMETABLE],
     });
     const encoded = encodeRawPayload(legacy, TIMETABLE_SHARE_LEGACY_PREFIX);
+    expect(decodeTimetableSharePayload(encoded).registrationNumber).toBe("");
 
     expect(encoded.startsWith(TIMETABLE_SHARE_LEGACY_PREFIX)).toBe(true);
     expect(decodeTimetableSharePayload(encoded).timetables).toEqual([SAMPLE_TIMETABLE]);

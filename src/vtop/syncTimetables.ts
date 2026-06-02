@@ -1,4 +1,4 @@
-import type { SemesterTimetable } from "../lib/types";
+import type { SemesterTimetable, VtopIdentity } from "../lib/types";
 import { saveTimetables } from "../storage/timetableStore";
 import { VtopClient } from "./client";
 import { loginToVtop } from "./login";
@@ -12,6 +12,7 @@ interface SyncTimetablesOptions {
 
 export interface SyncTimetablesResult {
   readonly attempts: number;
+  readonly identity: VtopIdentity;
   readonly timetables: SemesterTimetable[];
 }
 
@@ -38,6 +39,7 @@ export async function syncTimetablesFromVtop(
   );
   return {
     attempts: login.attempts,
+    identity: login.identity,
     timetables,
   };
 }

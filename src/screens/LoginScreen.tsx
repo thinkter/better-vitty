@@ -34,7 +34,7 @@ export function LoginScreen({ onSync }: Props) {
         ...credentials,
         onStatus: setStatus,
       });
-      await saveCredentials(credentials);
+      await saveCredentials({ ...credentials, ...result.identity });
       setPhase("done");
       onSync(result.timetables);
     } catch (err) {

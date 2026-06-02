@@ -10,6 +10,7 @@ import { ShareTimetableScreen } from "./src/screens/ShareTimetableScreen";
 import {
   deleteCredentials,
   loadCredentials,
+  saveCredentials,
 } from "./src/storage/credentialStore";
 import { isOnboardingComplete } from "./src/storage/onboardingStore";
 import { loadTimetables } from "./src/storage/timetableStore";
@@ -129,6 +130,7 @@ export default function App() {
       const result = await syncTimetablesFromVtop(
         onStatus ? { ...credentials, onStatus } : credentials,
       );
+      await saveCredentials({ ...credentials, ...result.identity });
       setTimetables(result.timetables);
     } catch (err) {
       if (asVtopError(err).code === "INVALID_CREDENTIALS") {

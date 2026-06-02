@@ -38,8 +38,14 @@ export interface AuthSession {
   readonly authorizedId: string;
 }
 
+export interface VtopIdentity {
+  readonly displayName: string;
+  readonly registrationNumber: string;
+}
+
 export interface LoginResult {
   readonly session: AuthSession;
+  readonly identity: VtopIdentity;
   readonly attempts: number;
 }
 
@@ -51,6 +57,7 @@ export interface FriendTimetable {
   readonly id: string;
   readonly fingerprint: string;
   readonly displayName: string;
+  readonly registrationNumber: string;
   readonly importedAt: string;
   readonly exportedAt: string;
   readonly timetables: readonly SemesterTimetable[];
@@ -100,6 +107,7 @@ export interface TimetableSharePayloadV2 {
   readonly s: readonly string[];
   readonly n: number;
   readonly x: number;
+  readonly r?: number;
   readonly t: readonly CompactV2SemesterTimetable[];
 }
 
@@ -135,6 +143,7 @@ export type CompactV2SemesterTimetable = readonly [
 export interface TimetableShareDecodeResult {
   readonly fingerprint: string;
   readonly displayName: string;
+  readonly registrationNumber: string;
   readonly exportedAt: string;
   readonly timetables: readonly SemesterTimetable[];
   readonly encodedBytes: number;

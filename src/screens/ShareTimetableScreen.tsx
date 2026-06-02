@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EncodingType, File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { ShareTimetableForm, type QrRef } from "../components/share/ShareTimetableForm";
 import type { SemesterTimetable } from "../lib/types";
 import { TimetableShareError, encodeTimetableSharePayload } from "../lib/timetableShare";
+import { loadCredentials } from "../storage/credentialStore";
 
 interface Props {
   readonly timetables: readonly SemesterTimetable[];
@@ -19,15 +20,32 @@ function qrPngBase64(ref: QrRef): Promise<string> {
 export function ShareTimetableScreen({ timetables, onBack }: Props) {
   const qrRef = useRef<QrRef | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
   const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    loadCredentials()
+      .then((credentials) => {
+        if (!alive || !credentials) return;
+        if (credentials.displayName) setDisplayName((current) => current || credentials.displayName || "");
+        if (credentials.registrationNumber) setRegistrationNumber(credentials.registrationNumber);
+      })
+      .catch(() => {
+        if (alive) setStatus("saved profile metadata unavailable");
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const encoded = useMemo(() => {
     try {
-      return encodeTimetableSharePayload({ displayName, timetables });
+      return encodeTimetableSharePayload({ displayName, registrationNumber, timetables });
     } catch (err) {
       return err;
     }
-  }, [displayName, timetables]);
+  }, [displayName, registrationNumber, timetables]);
 
   const encodedPayload = typeof encoded === "string" ? encoded : null;
   const errorMessage = encoded instanceof TimetableShareError ? encoded.message : encoded instanceof Error ? encoded.message : "";
@@ -61,6 +79,7 @@ export function ShareTimetableScreen({ timetables, onBack }: Props) {
   return (
     <ShareTimetableForm
       displayName={displayName}
+      registrationNumber={registrationNumber}
       encoded={encodedPayload}
       errorMessage={errorMessage}
       status={status}

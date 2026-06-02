@@ -3,7 +3,7 @@ import type { AuthSession, LoginResult } from "../lib/types";
 import type { LoginOptions } from "../lib/vtopTypes";
 import { VtopClient } from "./client";
 import { VtopError } from "./errors";
-import { extractAuthorizedId, extractCaptchaDataUri, extractCsrf, isRecaptchaPage, tryExtractCsrf } from "./parser";
+import { extractAuthorizedId, extractCaptchaDataUri, extractCsrf, extractVtopIdentity, isRecaptchaPage, tryExtractCsrf } from "./parser";
 export type { LoginOptions } from "../lib/vtopTypes";
 
 
@@ -77,7 +77,11 @@ export async function loginToVtop(client: VtopClient, options: LoginOptions): Pr
 
     if (!/\/vtop\/login/i.test(loginResponse.url) && !isInvalidLogin(loginResponse.text)) {
       const content = loginResponse.text.includes("authorizedID") ? loginResponse : await client.get("/vtop/content");
-      return { session: sessionFromHtml(content.text, loginPage.csrf), attempts: attempt };
+      return {
+        session: sessionFromHtml(content.text, loginPage.csrf),
+        identity: extractVtopIdentity(content.text, options.username),
+        attempts: attempt,
+      };
     }
 
     client.clearSession();

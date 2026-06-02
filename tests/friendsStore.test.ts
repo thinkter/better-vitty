@@ -42,6 +42,7 @@ const { deleteFriend, loadFriends, upsertFriend } = await import("../src/storage
 const decoded: TimetableShareDecodeResult = {
   fingerprint: "abc123",
   displayName: "Ada Lovelace",
+  registrationNumber: "24BCI0150",
   exportedAt: "2026-06-01T00:00:00.000Z",
   encodedBytes: 120,
   timetables: [
@@ -72,11 +73,12 @@ describe("friends store", () => {
     });
   });
 
-  it("searches by display name and deletes friends", async () => {
+  it("searches by display name and registration number and deletes friends", async () => {
     await upsertFriend(decoded, "2026-06-01T01:00:00.000Z");
-    await upsertFriend({ ...decoded, fingerprint: "def456", displayName: "Grace Hopper" }, "2026-06-01T01:00:00.000Z");
+    await upsertFriend({ ...decoded, fingerprint: "def456", displayName: "Grace Hopper", registrationNumber: "24BCE0001" }, "2026-06-01T01:00:00.000Z");
 
     expect(await loadFriends("grace")).toHaveLength(1);
+    expect(await loadFriends("24bce")).toHaveLength(1);
     await deleteFriend("def456");
     expect(await loadFriends()).toHaveLength(1);
   });

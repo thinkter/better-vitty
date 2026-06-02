@@ -19,6 +19,7 @@ function filterFriends(friends: readonly FriendTimetable[], query: string): Frie
   if (!normalized) return [...friends];
   return friends.filter((friend) => {
     if (friend.displayName.toLocaleLowerCase().includes(normalized)) return true;
+    if (friend.registrationNumber.toLocaleLowerCase().includes(normalized)) return true;
     return friend.timetables.some((timetable) =>
       timetable.courses.some((course) =>
         course.code.toLocaleLowerCase().includes(normalized)

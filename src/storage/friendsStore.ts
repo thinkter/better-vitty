@@ -35,11 +35,12 @@ function normalizeSearch(value: string): string {
 }
 
 function rowToFriend(row: FriendRow): FriendTimetable {
-  const parsed = JSON.parse(row.payload) as Pick<FriendTimetable, "timetables">;
+  const parsed = JSON.parse(row.payload) as Pick<FriendTimetable, "registrationNumber" | "timetables">;
   return {
     id: row.fingerprint,
     fingerprint: row.fingerprint,
     displayName: row.display_name,
+    registrationNumber: parsed.registrationNumber ?? "",
     importedAt: row.imported_at,
     exportedAt: row.exported_at,
     timetables: parsed.timetables,
@@ -68,7 +69,7 @@ export async function loadFriends(query = ""): Promise<FriendTimetable[]> {
 
 export async function upsertFriend(decoded: TimetableShareDecodeResult, importedAt = new Date().toISOString()): Promise<FriendTimetable> {
   const db = await database();
-  const payload = JSON.stringify({ timetables: decoded.timetables });
+  const payload = JSON.stringify({ registrationNumber: decoded.registrationNumber, timetables: decoded.timetables });
   await db.runAsync(
     `INSERT INTO friends (fingerprint, display_name, imported_at, exported_at, payload)
      VALUES (?, ?, ?, ?, ?)
@@ -87,6 +88,7 @@ export async function upsertFriend(decoded: TimetableShareDecodeResult, imported
     id: decoded.fingerprint,
     fingerprint: decoded.fingerprint,
     displayName: decoded.displayName,
+    registrationNumber: decoded.registrationNumber,
     importedAt,
     exportedAt: decoded.exportedAt,
     timetables: decoded.timetables,

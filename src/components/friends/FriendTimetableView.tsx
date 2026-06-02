@@ -16,7 +16,7 @@ export function FriendTimetableView({ friend, status, onBack, onDelete }: Friend
   return (
     <SafeAreaView style={styles.screen}>
       <TimetablePager
-        title={friend.displayName}
+        title={friend.registrationNumber ? `${friend.displayName} · ${friend.registrationNumber}` : friend.displayName}
         timetables={friend.timetables}
         headerRight={
           <View style={styles.headerActions}>

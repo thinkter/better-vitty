@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { VtopError } from "../../src/vtop/errors";
-import { extractCsrf, parseSemesters, parseTimetableHtml, tryExtractCsrf } from "../../src/vtop/parser";
+import { extractCsrf, extractVtopIdentity, parseSemesters, parseTimetableHtml, tryExtractCsrf } from "../../src/vtop/parser";
 
 const SEMESTER_HTML = `
   <select id="semesterSubId">
@@ -80,6 +80,23 @@ describe("VTOP HTML parsers", () => {
       { id: "VL20242505", name: "Winter Semester 2024-25" },
       { id: "VL20242501", name: "Fall Semester 2024-25" },
     ]);
+  });
+
+  it("extracts identity metadata from authenticated VTOP pages", () => {
+    expect(extractVtopIdentity(`
+      <input type="hidden" name="authorizedID" value="24BCI0150" />
+      <div><label>Student Name</label><span>Ashman Singh</span></div>
+    `, "ASHMANSINGH")).toEqual({
+      displayName: "Ashman Singh",
+      registrationNumber: "24BCI0150",
+    });
+    expect(extractVtopIdentity(`
+      <input type="hidden" name="authorizedID" value="24BCI0150" />
+      <span>24BCI0150 (STUDENT)</span>
+    `, "ASHMANSINGH")).toEqual({
+      displayName: "ASHMANSINGH",
+      registrationNumber: "24BCI0150",
+    });
   });
 
   it("parses course and event data from a processViewTimeTable response", () => {

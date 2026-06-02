@@ -10,6 +10,8 @@ const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
 export interface StoredCredentials {
   readonly username: string;
   readonly password: string;
+  readonly displayName?: string;
+  readonly registrationNumber?: string;
 }
 
 function parseCredentials(value: string): StoredCredentials | null {
@@ -24,6 +26,8 @@ function parseCredentials(value: string): StoredCredentials | null {
     return {
       username: parsed.username.trim(),
       password: parsed.password,
+      ...(typeof parsed.displayName === "string" && parsed.displayName.trim() ? { displayName: parsed.displayName.trim() } : {}),
+      ...(typeof parsed.registrationNumber === "string" && parsed.registrationNumber.trim() ? { registrationNumber: parsed.registrationNumber.trim().toUpperCase() } : {}),
     };
   } catch {
     return null;
@@ -43,6 +47,8 @@ export async function saveCredentials(credentials: StoredCredentials): Promise<v
     JSON.stringify({
       username: credentials.username.trim(),
       password: credentials.password,
+      ...(credentials.displayName?.trim() ? { displayName: credentials.displayName.trim() } : {}),
+      ...(credentials.registrationNumber?.trim() ? { registrationNumber: credentials.registrationNumber.trim().toUpperCase() } : {}),
     }),
     SECURE_STORE_OPTIONS,
   );

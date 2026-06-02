@@ -70,6 +70,48 @@ export function extractAuthorizedId(html: string): string {
   throw new VtopError("SESSION_EXPIRED", "authenticated VTOP page did not contain authorizedID");
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeIdentityName(value: string, registrationNumber: string, username: string): string {
+  const normalized = cleanText(value)
+    .replace(new RegExp(escapeRegex(registrationNumber), "ig"), " ")
+    .replace(/\bSTUDENT\b/gi, " ")
+    .replace(/[()|:;,-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized || username.trim() || registrationNumber;
+}
+
+function extractIdentityDisplayName(html: string, registrationNumber: string, username: string): string {
+  const escapedRegistration = escapeRegex(registrationNumber);
+  const labelMatch = new RegExp(
+    String.raw`(?:Student\s*Name|Name)\s*</[^>]+>\s*<[^>]+>([^<]+)`,
+    "i",
+  ).exec(html);
+  if (labelMatch?.[1]) return normalizeIdentityName(labelMatch[1], registrationNumber, username);
+
+  const registrationLabelMatch = new RegExp(
+    String.raw`([A-Za-z][A-Za-z .'-]{2,80})\s*\(\s*${escapedRegistration}\s*\)`,
+    "i",
+  ).exec(cleanText(html));
+  if (registrationLabelMatch?.[1]) return normalizeIdentityName(registrationLabelMatch[1], registrationNumber, username);
+
+  const welcomeMatch = /(?:Welcome|Hi|Hello)\s+([A-Za-z][A-Za-z .'-]{2,80})/i.exec(cleanText(html));
+  if (welcomeMatch?.[1]) return normalizeIdentityName(welcomeMatch[1], registrationNumber, username);
+
+  return normalizeIdentityName(username, registrationNumber, username);
+}
+
+export function extractVtopIdentity(html: string, username: string) {
+  const registrationNumber = extractAuthorizedId(html);
+  return {
+    displayName: extractIdentityDisplayName(html, registrationNumber, username),
+    registrationNumber,
+  };
+}
+
 export function isRecaptchaPage(html: string): boolean {
   return /id=["'](?:g-)?recaptcha["']|class=["'][^"']*g-recaptcha|captchaType\s*=\s*2/i.test(html);
 }

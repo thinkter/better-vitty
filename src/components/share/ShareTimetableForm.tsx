@@ -9,6 +9,7 @@ export type QrRef = { toDataURL: (callback: (data: string) => void) => void };
 
 interface ShareTimetableFormProps {
   readonly displayName: string;
+  readonly registrationNumber: string;
   readonly encoded: string | null;
   readonly errorMessage: string;
   readonly status: string;
@@ -18,7 +19,7 @@ interface ShareTimetableFormProps {
   readonly onShare: () => void;
 }
 
-export function ShareTimetableForm({ displayName, encoded, errorMessage, status, onBack, onDisplayNameChange, onQrRef, onShare }: ShareTimetableFormProps) {
+export function ShareTimetableForm({ displayName, registrationNumber, encoded, errorMessage, status, onBack, onDisplayNameChange, onQrRef, onShare }: ShareTimetableFormProps) {
   const canShare = encoded !== null;
 
   return (
@@ -42,6 +43,8 @@ export function ShareTimetableForm({ displayName, encoded, errorMessage, status,
           style={styles.input}
           value={displayName}
         />
+
+        {registrationNumber ? <Text style={styles.meta}>registration embedded: {registrationNumber}</Text> : null}
 
         <View style={styles.qrBox}>
           {canShare ? (

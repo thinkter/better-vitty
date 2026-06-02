@@ -22,6 +22,7 @@ export function FriendImportPreview({ pending, status, onCancel, onImport }: Fri
       </View>
       <View style={styles.preview}>
         <Text style={styles.previewName}>{pending.displayName}</Text>
+        {pending.registrationNumber ? <Text style={styles.previewMeta}>{pending.registrationNumber}</Text> : null}
         <Text style={styles.previewMeta}>{pending.timetables.length} semesters · exported {new Date(pending.exportedAt).toLocaleString()}</Text>
         <Text style={styles.previewMeta}>{pending.encodedBytes} QR bytes · {pending.fingerprint}</Text>
         <Pressable onPress={onImport} style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}>

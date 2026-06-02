@@ -33,7 +33,7 @@ export function FriendsList({ friends, query, status, onQueryChange, onOpenScann
           autoCapitalize="none"
           autoCorrect={false}
           onChangeText={onQueryChange}
-          placeholder="search name, course, faculty"
+          placeholder="search name, registration, course, faculty"
           placeholderTextColor="#333"
           style={styles.search}
           value={query}
@@ -52,7 +52,7 @@ export function FriendsList({ friends, query, status, onQueryChange, onOpenScann
               <Text style={styles.friendName}>{item.displayName}</Text>
               <Text style={styles.friendCount}>{item.timetables.length} sem</Text>
             </View>
-            <Text style={styles.friendMeta}>imported {new Date(item.importedAt).toLocaleDateString()} · exported {new Date(item.exportedAt).toLocaleDateString()}</Text>
+            <Text style={styles.friendMeta}>{item.registrationNumber ? `${item.registrationNumber} · ` : ""}imported {new Date(item.importedAt).toLocaleDateString()} · exported {new Date(item.exportedAt).toLocaleDateString()}</Text>
           </Pressable>
         )}
       />

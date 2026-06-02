@@ -34,6 +34,7 @@ export class TimetableShareError extends Error {
 
 interface EncodeInput {
   readonly displayName: string;
+  readonly registrationNumber?: string;
   readonly timetables: readonly SemesterTimetable[];
   readonly exportedAt?: string;
   readonly maxBytes?: number;
@@ -53,6 +54,10 @@ function validatedDisplayName(displayName: string): string {
     throw new TimetableShareError("NAME", `display name must be ${TIMETABLE_SHARE_DISPLAY_NAME_MAX_CHARS} characters or fewer`);
   }
   return normalized;
+}
+
+function normalizeRegistrationNumber(registrationNumber: string | undefined): string {
+  return registrationNumber?.trim().toUpperCase() ?? "";
 }
 
 function compactCourse(course: Course): CompactCourse {
@@ -321,7 +326,7 @@ function validateV2Payload(value: unknown): TimetableSharePayloadV2 {
   if (!value || typeof value !== "object") {
     throw new TimetableShareError("MALFORMED", "payload is not an object");
   }
-  const payload = value as { v?: unknown; s?: unknown; n?: unknown; x?: unknown; t?: unknown };
+  const payload = value as { v?: unknown; s?: unknown; n?: unknown; x?: unknown; r?: unknown; t?: unknown };
   if (payload.v !== 2) {
     throw new TimetableShareError("VERSION", "unsupported timetable QR version");
   }
@@ -335,6 +340,7 @@ function validateV2Payload(value: unknown): TimetableSharePayloadV2 {
   }
   assertStringIndex(payload.n, payload.s, "display name");
   assertStringIndex(payload.x, payload.s, "export timestamp");
+  if (payload.r !== undefined) assertStringIndex(payload.r, payload.s, "registration number");
   if (!Array.isArray(payload.t) || payload.t.length === 0) {
     throw new TimetableShareError("EMPTY", "timetable QR contains no timetables");
   }
@@ -420,12 +426,14 @@ export function buildTimetableSharePayload(input: EncodeInput): TimetableSharePa
   const strings = new StringTable();
   const displayName = strings.add(validatedDisplayName(input.displayName));
   const exportedAt = strings.add(input.exportedAt ?? new Date().toISOString());
+  const registrationNumber = normalizeRegistrationNumber(input.registrationNumber);
   const timetables = [compactV2Timetable(latestTimetable, strings)];
   return {
     v: 2,
     s: strings.values,
     n: displayName,
     x: exportedAt,
+    ...(registrationNumber ? { r: strings.add(registrationNumber) } : {}),
     t: timetables,
   };
 }
@@ -461,6 +469,7 @@ export function decodeTimetableSharePayload(raw: string, maxBytes = TIMETABLE_SH
       return {
         fingerprint: fnv1a64Hex(JSON.stringify(payload)),
         displayName: normalizeDisplayName(payload.n),
+        registrationNumber: "",
         exportedAt: payload.x,
         timetables: payload.t.map(expandTimetable),
         encodedBytes: raw.length,
@@ -470,6 +479,7 @@ export function decodeTimetableSharePayload(raw: string, maxBytes = TIMETABLE_SH
     return {
       fingerprint: fnv1a64Hex(JSON.stringify(payload)),
       displayName: normalizeDisplayName(payload.s[payload.n]!),
+      registrationNumber: payload.r === undefined ? "" : payload.s[payload.r]!,
       exportedAt: payload.s[payload.x]!,
       timetables: payload.t.map((timetable) => expandV2Timetable(timetable, payload.s)),
       encodedBytes: raw.length,
