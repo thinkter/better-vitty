@@ -1,18 +1,32 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { CameraView, Camera, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
+import { Camera, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
+import { FriendImportPreview } from "../components/friends/FriendImportPreview";
+import { FriendQrScanner } from "../components/friends/FriendQrScanner";
+import { FriendTimetableView } from "../components/friends/FriendTimetableView";
+import { FriendsList } from "../components/friends/FriendsList";
 import type { FriendTimetable, TimetableShareDecodeResult } from "../lib/types";
 import { TimetableShareError, decodeTimetableSharePayload } from "../lib/timetableShare";
 import { deleteFriend, loadFriends, upsertFriend } from "../storage/friendsStore";
-import { TimetablePager } from "./TimetableScreen";
-
-const MONO = "monospace";
 
 function decodeStatus(err: unknown): string {
   if (err instanceof TimetableShareError) return err.message;
   return err instanceof Error ? err.message : "failed to import timetable QR";
+}
+
+function filterFriends(friends: readonly FriendTimetable[], query: string): FriendTimetable[] {
+  const normalized = query.trim().toLocaleLowerCase();
+  if (!normalized) return [...friends];
+  return friends.filter((friend) => {
+    if (friend.displayName.toLocaleLowerCase().includes(normalized)) return true;
+    return friend.timetables.some((timetable) =>
+      timetable.courses.some((course) =>
+        course.code.toLocaleLowerCase().includes(normalized)
+        || course.title.toLocaleLowerCase().includes(normalized)
+        || course.faculty.toLocaleLowerCase().includes(normalized),
+      ),
+    );
+  });
 }
 
 export function FriendsScreen() {
@@ -32,20 +46,7 @@ export function FriendsScreen() {
     refreshFriends().catch((err) => setStatus(decodeStatus(err)));
   }, [refreshFriends]);
 
-  const filteredFriends = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase();
-    if (!normalized) return friends;
-    return friends.filter((friend) => {
-      if (friend.displayName.toLocaleLowerCase().includes(normalized)) return true;
-      return friend.timetables.some((timetable) =>
-        timetable.courses.some((course) =>
-          course.code.toLocaleLowerCase().includes(normalized)
-          || course.title.toLocaleLowerCase().includes(normalized)
-          || course.faculty.toLocaleLowerCase().includes(normalized),
-        ),
-      );
-    });
-  }, [friends, query]);
+  const filteredFriends = useMemo(() => filterFriends(friends, query), [friends, query]);
 
   async function importDecoded(decoded: TimetableShareDecodeResult) {
     const friend = await upsertFriend(decoded);
@@ -109,138 +110,40 @@ export function FriendsScreen() {
   }
 
   if (scannerOpen) {
-    return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.header}>
-          <Pressable onPress={() => setScannerOpen(false)} style={({ pressed }) => [styles.linkBtn, pressed && styles.pressed]}>
-            <Text style={styles.linkText}>← friends</Text>
-          </Pressable>
-          <Text style={styles.title}>scan QR</Text>
-        </View>
-        <CameraView
-          style={styles.camera}
-          facing="back"
-          barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-          onBarcodeScanned={(result: BarcodeScanningResult) => stageRawQr(result.data)}
-        />
-        {status ? <Text style={styles.status}>$ {status}</Text> : null}
-      </SafeAreaView>
-    );
+    return <FriendQrScanner status={status} onBack={() => setScannerOpen(false)} onScan={stageRawQr} />;
   }
 
   if (pending) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.header}>
-          <Pressable onPress={() => setPending(null)} style={({ pressed }) => [styles.linkBtn, pressed && styles.pressed]}>
-            <Text style={styles.linkText}>← cancel</Text>
-          </Pressable>
-          <Text style={styles.title}>confirm import</Text>
-        </View>
-        <View style={styles.preview}>
-          <Text style={styles.previewName}>{pending.displayName}</Text>
-          <Text style={styles.previewMeta}>{pending.timetables.length} semesters · exported {new Date(pending.exportedAt).toLocaleString()}</Text>
-          <Text style={styles.previewMeta}>{pending.encodedBytes} QR bytes · {pending.fingerprint}</Text>
-          <Pressable onPress={() => importDecoded(pending).catch((err) => setStatus(decodeStatus(err)))} style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}>
-            <Text style={styles.primaryText}>import friend</Text>
-          </Pressable>
-          {status ? <Text style={styles.status}>$ {status}</Text> : null}
-        </View>
-      </SafeAreaView>
+      <FriendImportPreview
+        pending={pending}
+        status={status}
+        onCancel={() => setPending(null)}
+        onImport={() => importDecoded(pending).catch((err) => setStatus(decodeStatus(err)))}
+      />
     );
   }
 
   if (selected) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <TimetablePager
-          title={selected.displayName}
-          timetables={selected.timetables}
-          headerRight={
-            <View style={styles.headerActions}>
-              <Pressable onPress={() => setSelected(null)} style={({ pressed }) => [styles.linkBtn, pressed && styles.pressed]}>
-                <Text style={styles.linkText}>[back]</Text>
-              </Pressable>
-              <Pressable onPress={() => removeSelected().catch((err) => setStatus(decodeStatus(err)))} style={({ pressed }) => [styles.linkBtn, pressed && styles.pressed]}>
-                <Text style={styles.dangerText}>[delete]</Text>
-              </Pressable>
-            </View>
-          }
-        />
-        {status ? <Text style={styles.status}>$ {status}</Text> : null}
-      </SafeAreaView>
+      <FriendTimetableView
+        friend={selected}
+        status={status}
+        onBack={() => setSelected(null)}
+        onDelete={() => removeSelected().catch((err) => setStatus(decodeStatus(err)))}
+      />
     );
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.headerBlock}>
-        <View style={styles.header}>
-          <Text style={styles.title}>friends</Text>
-          <View style={styles.headerActions}>
-            <Pressable onPress={openScanner} style={({ pressed }) => [styles.linkBtn, pressed && styles.pressed]}>
-              <Text style={styles.linkText}>[scan]</Text>
-            </Pressable>
-            <Pressable onPress={importFromGallery} style={({ pressed }) => [styles.linkBtn, pressed && styles.pressed]}>
-              <Text style={styles.linkText}>[gallery]</Text>
-            </Pressable>
-          </View>
-        </View>
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          onChangeText={setQuery}
-          placeholder="search name, course, faculty"
-          placeholderTextColor="#333"
-          style={styles.search}
-          value={query}
-        />
-        {status ? <Text style={styles.status}>$ {status}</Text> : null}
-      </View>
-
-      <FlatList
-        data={filteredFriends}
-        keyExtractor={(item) => item.fingerprint}
-        contentContainerStyle={styles.friendList}
-        ListEmptyComponent={<Text style={styles.emptyText}>{query ? "no friends match search." : "no friends imported yet."}</Text>}
-        renderItem={({ item }) => (
-          <Pressable onPress={() => setSelected(item)} style={({ pressed }) => [styles.friendRow, pressed && styles.rowPressed]}>
-            <View style={styles.friendTopRow}>
-              <Text style={styles.friendName}>{item.displayName}</Text>
-              <Text style={styles.friendCount}>{item.timetables.length} sem</Text>
-            </View>
-            <Text style={styles.friendMeta}>imported {new Date(item.importedAt).toLocaleDateString()} · exported {new Date(item.exportedAt).toLocaleDateString()}</Text>
-          </Pressable>
-        )}
-      />
-    </SafeAreaView>
+    <FriendsList
+      friends={filteredFriends}
+      query={query}
+      status={status}
+      onQueryChange={setQuery}
+      onOpenScanner={() => openScanner().catch((err) => setStatus(decodeStatus(err)))}
+      onImportFromGallery={() => importFromGallery().catch((err) => setStatus(decodeStatus(err)))}
+      onSelectFriend={setSelected}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#000" },
-  headerBlock: { borderBottomColor: "#111", borderBottomWidth: 1, paddingBottom: 12 },
-  header: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  title: { color: "#fff", fontFamily: MONO, fontSize: 15, fontWeight: "700" },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 12 },
-  linkBtn: { paddingVertical: 6 },
-  linkText: { color: "#777", fontFamily: MONO, fontSize: 12 },
-  dangerText: { color: "#ff7777", fontFamily: MONO, fontSize: 12 },
-  pressed: { opacity: 0.55 },
-  search: { marginHorizontal: 20, borderColor: "#222", borderWidth: 1, color: "#fff", fontFamily: MONO, fontSize: 13, paddingHorizontal: 12, paddingVertical: 10 },
-  status: { color: "#555", fontFamily: MONO, fontSize: 11, paddingHorizontal: 20, paddingBottom: 8 },
-  friendList: { paddingVertical: 8, flexGrow: 1 },
-  emptyText: { color: "#555", fontFamily: MONO, fontSize: 13, textAlign: "center", paddingTop: 48 },
-  friendRow: { paddingHorizontal: 20, paddingVertical: 16, borderBottomColor: "#111", borderBottomWidth: 1 },
-  rowPressed: { backgroundColor: "#0d0d0d" },
-  friendTopRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 },
-  friendName: { color: "#fff", fontFamily: MONO, fontSize: 14, fontWeight: "700" },
-  friendCount: { color: "#555", fontFamily: MONO, fontSize: 11 },
-  friendMeta: { color: "#777", fontFamily: MONO, fontSize: 11, marginTop: 6 },
-  camera: { flex: 1, margin: 20, borderColor: "#222", borderWidth: 1 },
-  preview: { padding: 20, gap: 14 },
-  previewName: { color: "#fff", fontFamily: MONO, fontSize: 18, fontWeight: "700" },
-  previewMeta: { color: "#777", fontFamily: MONO, fontSize: 12, lineHeight: 18 },
-  primaryBtn: { borderColor: "#fff", borderWidth: 1, paddingVertical: 13, alignItems: "center", marginTop: 8 },
-  primaryText: { color: "#fff", fontFamily: MONO, fontSize: 13 },
-});

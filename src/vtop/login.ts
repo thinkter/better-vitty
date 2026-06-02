@@ -8,7 +8,9 @@ export type { LoginOptions } from "../lib/vtopTypes";
 
 
 function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  const { promise, resolve } = Promise.withResolvers<void>();
+  setTimeout(resolve, ms);
+  return promise;
 }
 
 function isInvalidLogin(html: string): boolean {
