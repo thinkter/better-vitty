@@ -17,6 +17,7 @@ import type {
 export const TIMETABLE_SHARE_LEGACY_PREFIX = "BVTT1.";
 export const TIMETABLE_SHARE_PREFIX = "BVTT2.";
 export const TIMETABLE_SHARE_MAX_BYTES = 2500;
+export const TIMETABLE_SHARE_DISPLAY_NAME_MAX_CHARS = 40;
 
 const MAX_DECODED_TIMETABLES = 32;
 const MAX_DECODED_COURSES_PER_TIMETABLE = 512;
@@ -25,7 +26,7 @@ const MAX_DECODED_STRINGS = 50000;
 const MAX_DECODED_STRING_LENGTH = 4096;
 
 export class TimetableShareError extends Error {
-  constructor(readonly code: "EMPTY" | "PREFIX" | "VERSION" | "MALFORMED" | "OVERSIZE", message: string) {
+  constructor(readonly code: "EMPTY" | "PREFIX" | "VERSION" | "MALFORMED" | "OVERSIZE" | "NAME", message: string) {
     super(message);
     this.name = "TimetableShareError";
   }
@@ -41,6 +42,17 @@ interface EncodeInput {
 function normalizeDisplayName(displayName: string): string {
   const trimmed = displayName.trim().replace(/\s+/g, " ");
   return trimmed || "better-vitty user";
+}
+
+function validatedDisplayName(displayName: string): string {
+  const normalized = displayName.trim().replace(/\s+/g, " ");
+  if (!normalized) {
+    throw new TimetableShareError("NAME", "display name is required");
+  }
+  if (normalized.length > TIMETABLE_SHARE_DISPLAY_NAME_MAX_CHARS) {
+    throw new TimetableShareError("NAME", `display name must be ${TIMETABLE_SHARE_DISPLAY_NAME_MAX_CHARS} characters or fewer`);
+  }
+  return normalized;
 }
 
 function compactCourse(course: Course): CompactCourse {
@@ -381,7 +393,7 @@ export function buildLegacyTimetableSharePayload(input: EncodeInput): TimetableS
   }
   return {
     v: 1,
-    n: normalizeDisplayName(input.displayName),
+    n: validatedDisplayName(input.displayName),
     x: input.exportedAt ?? new Date().toISOString(),
     t: input.timetables.map(compactTimetable),
   };
@@ -406,7 +418,7 @@ export function selectLatestTimetable(timetables: readonly SemesterTimetable[]):
 export function buildTimetableSharePayload(input: EncodeInput): TimetableSharePayloadV2 {
   const latestTimetable = selectLatestTimetable(input.timetables);
   const strings = new StringTable();
-  const displayName = strings.add(normalizeDisplayName(input.displayName));
+  const displayName = strings.add(validatedDisplayName(input.displayName));
   const exportedAt = strings.add(input.exportedAt ?? new Date().toISOString());
   const timetables = [compactV2Timetable(latestTimetable, strings)];
   return {

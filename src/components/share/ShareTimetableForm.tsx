@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
-import { TIMETABLE_SHARE_MAX_BYTES } from "../../lib/timetableShare";
+import { TIMETABLE_SHARE_DISPLAY_NAME_MAX_CHARS, TIMETABLE_SHARE_MAX_BYTES } from "../../lib/timetableShare";
 
 const MONO = "monospace";
 
@@ -31,10 +31,11 @@ export function ShareTimetableForm({ displayName, encoded, errorMessage, status,
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.label}>display name embedded in QR</Text>
+        <Text style={styles.label}>display name embedded in QR ({displayName.trim().length}/{TIMETABLE_SHARE_DISPLAY_NAME_MAX_CHARS})</Text>
         <TextInput
           autoCapitalize="words"
           autoCorrect={false}
+          maxLength={TIMETABLE_SHARE_DISPLAY_NAME_MAX_CHARS}
           onChangeText={onDisplayNameChange}
           placeholder="better-vitty user"
           placeholderTextColor="#333"

@@ -6,6 +6,7 @@ import {
   TIMETABLE_SHARE_LEGACY_PREFIX,
   TIMETABLE_SHARE_PREFIX,
   TimetableShareError,
+  TIMETABLE_SHARE_DISPLAY_NAME_MAX_CHARS,
   buildLegacyTimetableSharePayload,
   decodeTimetableSharePayload,
   selectLatestTimetable,
@@ -124,6 +125,25 @@ describe("timetable share codec", () => {
     expect(decoded.timetables[0]!.courses[0]!.raw).toEqual([]);
     expect(decoded.timetables[0]!.events[0]!.raw).toBe("");
     expect(decoded.fingerprint).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it("requires a non-empty display name within the QR name limit", () => {
+    expectShareError(
+      () => encodeTimetableSharePayload({
+        displayName: "   ",
+        exportedAt: "2026-06-01T00:00:00.000Z",
+        timetables: [SAMPLE_TIMETABLE],
+      }),
+      "NAME",
+    );
+    expectShareError(
+      () => encodeTimetableSharePayload({
+        displayName: "A".repeat(TIMETABLE_SHARE_DISPLAY_NAME_MAX_CHARS + 1),
+        exportedAt: "2026-06-01T00:00:00.000Z",
+        timetables: [SAMPLE_TIMETABLE],
+      }),
+      "NAME",
+    );
   });
 
   it("decodes legacy v1 QR payloads without dropping legacy raw fields", () => {

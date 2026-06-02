@@ -11,9 +11,9 @@ interface Props {
 }
 
 function qrPngBase64(ref: QrRef): Promise<string> {
-  const { promise, resolve } = Promise.withResolvers<string>();
-  ref.toDataURL(resolve);
-  return promise;
+  return new Promise((resolve) => {
+    ref.toDataURL(resolve);
+  });
 }
 
 export function ShareTimetableScreen({ timetables, onBack }: Props) {
@@ -36,7 +36,9 @@ export function ShareTimetableScreen({ timetables, onBack }: Props) {
     if (!qrRef.current) throw new Error("QR preview is not ready");
     const base64 = await qrPngBase64(qrRef.current);
     const file = new File(Paths.cache, `better-vitty-timetable-${Date.now()}.png`);
+    file.create({ overwrite: true });
     file.write(base64, { encoding: EncodingType.Base64 });
+    if (!file.exists || file.size === 0) throw new Error("failed to prepare QR image");
     return file.uri;
   }
 
