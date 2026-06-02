@@ -86,15 +86,14 @@ describe("VTOP HTML parsers", () => {
     expect(extractVtopIdentity(`
       <input type="hidden" name="authorizedID" value="24BCI0150" />
       <div><label>Student Name</label><span>Ashman Singh</span></div>
-    `, "ASHMANSINGH")).toEqual({
+    `)).toEqual({
       displayName: "Ashman Singh",
       registrationNumber: "24BCI0150",
     });
     expect(extractVtopIdentity(`
       <input type="hidden" name="authorizedID" value="24BCI0150" />
       <span>24BCI0150 (STUDENT)</span>
-    `, "ASHMANSINGH")).toEqual({
-      displayName: "ASHMANSINGH",
+    `)).toEqual({
       registrationNumber: "24BCI0150",
     });
   });

@@ -14,6 +14,19 @@ export interface StoredCredentials {
   readonly registrationNumber?: string;
 }
 
+function normalizeRegistrationNumber(value: string | undefined): string | undefined {
+  const normalized = value?.trim().toUpperCase();
+  return normalized || undefined;
+}
+
+function normalizeDisplayName(value: string | undefined, username: string, registrationNumber: string | undefined): string | undefined {
+  const normalized = value?.trim().replace(/\s+/g, " ");
+  if (!normalized) return undefined;
+  if (normalized.toLocaleLowerCase() === username.trim().toLocaleLowerCase()) return undefined;
+  if (registrationNumber && normalized.toLocaleLowerCase() === registrationNumber.toLocaleLowerCase()) return undefined;
+  return normalized;
+}
+
 function parseCredentials(value: string): StoredCredentials | null {
   try {
     const parsed = JSON.parse(value) as Partial<StoredCredentials>;
@@ -23,11 +36,14 @@ function parseCredentials(value: string): StoredCredentials | null {
     if (!parsed.username.trim() || !parsed.password) {
       return null;
     }
+    const username = parsed.username.trim();
+    const registrationNumber = normalizeRegistrationNumber(parsed.registrationNumber);
+    const displayName = normalizeDisplayName(parsed.displayName, username, registrationNumber);
     return {
-      username: parsed.username.trim(),
+      username,
       password: parsed.password,
-      ...(typeof parsed.displayName === "string" && parsed.displayName.trim() ? { displayName: parsed.displayName.trim() } : {}),
-      ...(typeof parsed.registrationNumber === "string" && parsed.registrationNumber.trim() ? { registrationNumber: parsed.registrationNumber.trim().toUpperCase() } : {}),
+      ...(displayName ? { displayName } : {}),
+      ...(registrationNumber ? { registrationNumber } : {}),
     };
   } catch {
     return null;
@@ -42,13 +58,16 @@ async function assertSecureStoreAvailable(): Promise<void> {
 
 export async function saveCredentials(credentials: StoredCredentials): Promise<void> {
   await assertSecureStoreAvailable();
+  const username = credentials.username.trim();
+  const registrationNumber = normalizeRegistrationNumber(credentials.registrationNumber);
+  const displayName = normalizeDisplayName(credentials.displayName, username, registrationNumber);
   await SecureStore.setItemAsync(
     CREDENTIALS_KEY,
     JSON.stringify({
-      username: credentials.username.trim(),
+      username,
       password: credentials.password,
-      ...(credentials.displayName?.trim() ? { displayName: credentials.displayName.trim() } : {}),
-      ...(credentials.registrationNumber?.trim() ? { registrationNumber: credentials.registrationNumber.trim().toUpperCase() } : {}),
+      ...(displayName ? { displayName } : {}),
+      ...(registrationNumber ? { registrationNumber } : {}),
     }),
     SECURE_STORE_OPTIONS,
   );

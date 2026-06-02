@@ -74,40 +74,46 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function normalizeIdentityName(value: string, registrationNumber: string, username: string): string {
-  const normalized = cleanText(value)
+function normalizeIdentityName(value: string, registrationNumber: string): string {
+  return cleanText(value)
     .replace(new RegExp(escapeRegex(registrationNumber), "ig"), " ")
     .replace(/\bSTUDENT\b/gi, " ")
     .replace(/[()|:;,-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  return normalized || username.trim() || registrationNumber;
 }
 
-function extractIdentityDisplayName(html: string, registrationNumber: string, username: string): string {
+function usableIdentityName(value: string | undefined, registrationNumber: string): string | undefined {
+  if (!value) return undefined;
+  const normalized = normalizeIdentityName(value, registrationNumber);
+  return normalized ? normalized : undefined;
+}
+
+function extractIdentityDisplayName(html: string, registrationNumber: string): string | undefined {
   const escapedRegistration = escapeRegex(registrationNumber);
   const labelMatch = new RegExp(
     String.raw`(?:Student\s*Name|Name)\s*</[^>]+>\s*<[^>]+>([^<]+)`,
     "i",
   ).exec(html);
-  if (labelMatch?.[1]) return normalizeIdentityName(labelMatch[1], registrationNumber, username);
+  const labeledName = usableIdentityName(labelMatch?.[1], registrationNumber);
+  if (labeledName) return labeledName;
 
   const registrationLabelMatch = new RegExp(
     String.raw`([A-Za-z][A-Za-z .'-]{2,80})\s*\(\s*${escapedRegistration}\s*\)`,
     "i",
   ).exec(cleanText(html));
-  if (registrationLabelMatch?.[1]) return normalizeIdentityName(registrationLabelMatch[1], registrationNumber, username);
+  const registrationLabelName = usableIdentityName(registrationLabelMatch?.[1], registrationNumber);
+  if (registrationLabelName) return registrationLabelName;
 
   const welcomeMatch = /(?:Welcome|Hi|Hello)\s+([A-Za-z][A-Za-z .'-]{2,80})/i.exec(cleanText(html));
-  if (welcomeMatch?.[1]) return normalizeIdentityName(welcomeMatch[1], registrationNumber, username);
-
-  return normalizeIdentityName(username, registrationNumber, username);
+  return usableIdentityName(welcomeMatch?.[1], registrationNumber);
 }
 
-export function extractVtopIdentity(html: string, username: string) {
+export function extractVtopIdentity(html: string) {
   const registrationNumber = extractAuthorizedId(html);
+  const displayName = extractIdentityDisplayName(html, registrationNumber);
   return {
-    displayName: extractIdentityDisplayName(html, registrationNumber, username),
+    ...(displayName ? { displayName } : {}),
     registrationNumber,
   };
 }

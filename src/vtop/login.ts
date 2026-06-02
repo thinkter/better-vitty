@@ -79,7 +79,7 @@ export async function loginToVtop(client: VtopClient, options: LoginOptions): Pr
       const content = loginResponse.text.includes("authorizedID") ? loginResponse : await client.get("/vtop/content");
       return {
         session: sessionFromHtml(content.text, loginPage.csrf),
-        identity: extractVtopIdentity(content.text, options.username),
+        identity: extractVtopIdentity(content.text),
         attempts: attempt,
       };
     }

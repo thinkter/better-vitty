@@ -39,7 +39,7 @@ export interface AuthSession {
 }
 
 export interface VtopIdentity {
-  readonly displayName: string;
+  readonly displayName?: string;
   readonly registrationNumber: string;
 }
 
