@@ -11,9 +11,13 @@
       "supportsTablet": true
     },
     "android": {
-	  "package": "foo.ashman.bettervitty",
-	   "versionCode": 1
-      "edgeToEdgeEnabled": true
+      "package": "foo.ashman.bettervitty",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-sqlite",
@@ -30,6 +34,12 @@
           "photosPermission": "Allow Better Vitty to import timetable QR images."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2ba14abd-bf77-4061-b14e-61412fdaca86"
+      }
+    },
+    "owner": "123karan1234"
   }
 }
