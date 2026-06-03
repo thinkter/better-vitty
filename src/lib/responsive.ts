@@ -45,6 +45,7 @@ export function usePhoneMetrics() {
       scheduleTop: compact ? 16 : 20,
       scheduleBottom: compact ? 32 : 40,
       bottomTabPaddingY: compact ? 12 : 14,
+      bottomTabSafeGap: compact ? 8 : 10,
       minTouchSize: 44,
     };
   }, [fontScale, width]);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Screen, SemesterTimetable } from "./src/lib/types";
 import { usePhoneMetrics } from "./src/lib/responsive";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
@@ -29,6 +29,7 @@ interface AppShellProps {
 
 function AppShell({ timetables, onResync, onSync }: AppShellProps) {
   const metrics = usePhoneMetrics();
+  const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<AppTab>("my timetable");
   const [sharing, setSharing] = useState(false);
 
@@ -50,7 +51,7 @@ function AppShell({ timetables, onResync, onSync }: AppShellProps) {
           <FriendsScreen />
         )}
       </View>
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { paddingBottom: insets.bottom + metrics.bottomTabSafeGap }]}>
         {(["my timetable", "friends"] as const).map((item) => (
           <Pressable
             key={item}
