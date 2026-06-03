@@ -3,7 +3,13 @@ import type { StoredCookie, VtopClientOptions, VtopResponse } from "../lib/vtopT
 import { VtopError, asVtopError, mapHttpStatus } from "./errors";
 export type { VtopClientOptions, VtopResponse } from "../lib/vtopTypes";
 
+const NETWORK_RETRY_DELAYS_MS = [350, 900] as const;
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 function splitSetCookie(header: string): string[] {
   const values: string[] = [];
@@ -82,7 +88,14 @@ export class VtopClient {
     }
   }
 
-  private async request(method: string, path: string, body?: string, headers?: HeadersInit, redirectDepth = 0): Promise<VtopResponse> {
+  private async request(
+    method: string,
+    path: string,
+    body?: string,
+    headers?: HeadersInit,
+    redirectDepth = 0,
+    networkAttempt = 0,
+  ): Promise<VtopResponse> {
     if (redirectDepth > 8) throw new VtopError("VTOP_UNAVAILABLE", "too many VTOP redirects");
     const url = this.absoluteUrl(path);
     const cookie = this.cookieHeader();
@@ -108,6 +121,11 @@ export class VtopClient {
       if (body !== undefined) init.body = body;
       response = await this.fetchImpl(url, init);
     } catch (error) {
+      const retryDelay = NETWORK_RETRY_DELAYS_MS[networkAttempt];
+      if (method === "GET" && retryDelay !== undefined) {
+        await delay(retryDelay);
+        return this.request(method, path, body, headers, redirectDepth, networkAttempt + 1);
+      }
       throw asVtopError(error);
     }
 

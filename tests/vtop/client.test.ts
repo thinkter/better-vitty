@@ -85,4 +85,33 @@ describe("VtopClient", () => {
     });
     await expect(client.get("/vtop/content")).rejects.toMatchObject({ code: "NETWORK_UNAVAILABLE" } satisfies Partial<VtopError>);
   });
+
+  it("retries transient GET network failures", async () => {
+    let calls = 0;
+    const client = new VtopClient({
+      fetchImpl: async () => {
+        calls += 1;
+        if (calls === 1) throw new TypeError("Network request failed");
+        return response("ok");
+      },
+    });
+
+    await expect(client.get("/vtop/login")).resolves.toMatchObject({ text: "ok" });
+    expect(calls).toBe(2);
+  });
+
+  it("does not retry POST submissions after network failures", async () => {
+    let calls = 0;
+    const client = new VtopClient({
+      fetchImpl: async () => {
+        calls += 1;
+        throw new TypeError("Network request failed");
+      },
+    });
+
+    await expect(client.postForm("/vtop/login", { username: "u", password: "p" })).rejects.toMatchObject({
+      code: "NETWORK_UNAVAILABLE",
+    } satisfies Partial<VtopError>);
+    expect(calls).toBe(1);
+  });
 });
