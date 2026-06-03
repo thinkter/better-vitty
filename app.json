@@ -11,6 +11,8 @@
       "supportsTablet": true
     },
     "android": {
+	  "package": "foo.ashman.bettervitty",
+	   "versionCode": 1
       "edgeToEdgeEnabled": true
     },
     "plugins": [
