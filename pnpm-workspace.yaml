@@ -1,5 +1,8 @@
 packages:
   - "packages/*"
 
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade
+
 patchedDependencies:
   fast-png@8.0.0: patches/fast-png@8.0.0.patch

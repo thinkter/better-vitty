@@ -69,14 +69,14 @@ export class VtopClient {
     for (const cookieText of splitSetCookie(raw)) {
       const parts = cookieText.split(";").map((part) => part.trim());
       const [nameValue, ...attrs] = parts;
-      const eq = nameValue?.indexOf("=") ?? -1;
-      if (!nameValue || eq <= 0) continue;
-      const name = nameValue.slice(0, eq);
-      const value = nameValue.slice(eq + 1);
+      if (!nameValue) continue;
+      const [name, ...valueParts] = nameValue.split("=");
+      if (!name || valueParts.length === 0) continue;
+      const value = valueParts.join("=");
       let path = "/";
       for (const attr of attrs) {
-        const attrEq = attr.indexOf("=");
-        if (attrEq > 0 && attr.slice(0, attrEq).toLowerCase() === "path") path = attr.slice(attrEq + 1) || "/";
+        const [attrName, ...attrValueParts] = attr.split("=");
+        if (attrName?.toLowerCase() === "path" && attrValueParts.length > 0) path = attrValueParts.join("=") || "/";
       }
       this.cookies.set(name, { name, value, path });
     }

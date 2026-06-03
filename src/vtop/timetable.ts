@@ -21,20 +21,19 @@ export async function fetchAllTimetables(
 
   const semesters = parseSemesters(entry.text);
   const fetchedAt = new Date().toISOString();
-  const timetables: SemesterTimetable[] = [];
 
-  for (const semester of semesters) {
-    options.onStatus?.(`fetching ${semester.name}`);
-    const html = await client.postForm("/vtop/processViewTimeTable", {
-      _csrf: session.csrf,
-      semesterSubId: semester.id,
-      authorizedID: session.authorizedId,
-      x: new Date().toUTCString(),
-    });
-    if (/\/vtop\/login/i.test(html.url)) throw new VtopError("SESSION_EXPIRED", "VTOP session expired");
-    const parsed = parseTimetableHtml(html.text);
-    timetables.push({ semester, courses: parsed.courses, events: parsed.events, fetchedAt });
-  }
-
-  return timetables;
+  return Promise.all(
+    semesters.map(async (semester) => {
+      options.onStatus?.(`fetching ${semester.name}`);
+      const html = await client.postForm("/vtop/processViewTimeTable", {
+        _csrf: session.csrf,
+        semesterSubId: semester.id,
+        authorizedID: session.authorizedId,
+        x: new Date().toUTCString(),
+      });
+      if (/\/vtop\/login/i.test(html.url)) throw new VtopError("SESSION_EXPIRED", "VTOP session expired");
+      const parsed = parseTimetableHtml(html.text);
+      return { semester, courses: parsed.courses, events: parsed.events, fetchedAt };
+    }),
+  );
 }

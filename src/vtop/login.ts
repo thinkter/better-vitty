@@ -33,22 +33,24 @@ async function prepareLoginPage(client: VtopClient, options: LoginOptions): Prom
   }
 
   const max = options.maxCaptchaPageAttempts ?? 6;
-  for (let attempt = 1; attempt <= max; attempt += 1) {
+  async function fetchCaptchaPage(attempt: number): Promise<{ csrf: string; captchaDataUri: string }> {
     options.onStatus?.(`fetching captcha ${attempt}/${max}`);
     const loginPage = await client.get("/vtop/login");
     if (isRecaptchaPage(loginPage.text)) {
       if (attempt < max) await delay(600 * attempt);
-      continue;
+      if (attempt < max) return fetchCaptchaPage(attempt + 1);
+      throw new VtopError("CAPTCHA_UNAVAILABLE", "VTOP did not provide a text captcha");
     }
     const captchaDataUri = extractCaptchaDataUri(loginPage.text);
     if (!captchaDataUri) {
       if (attempt < max) await delay(600 * attempt);
-      continue;
+      if (attempt < max) return fetchCaptchaPage(attempt + 1);
+      throw new VtopError("CAPTCHA_UNAVAILABLE", "VTOP did not provide a text captcha");
     }
     return { csrf: extractCsrf(loginPage.text), captchaDataUri };
   }
 
-  throw new VtopError("CAPTCHA_UNAVAILABLE", "VTOP did not provide a text captcha");
+  return fetchCaptchaPage(1);
 }
 
 function sessionFromHtml(html: string, fallbackCsrf: string): AuthSession {
@@ -57,7 +59,7 @@ function sessionFromHtml(html: string, fallbackCsrf: string): AuthSession {
 
 export async function loginToVtop(client: VtopClient, options: LoginOptions): Promise<LoginResult> {
   const max = options.maxCaptchaAttempts ?? 4;
-  for (let attempt = 1; attempt <= max; attempt += 1) {
+  async function attemptLogin(attempt: number): Promise<LoginResult> {
     const loginPage = await prepareLoginPage(client, options);
     options.onStatus?.(`solving captcha ${attempt}/${max}`);
     const captcha = await solveCaptcha(loginPage.captchaDataUri);
@@ -76,7 +78,7 @@ export async function loginToVtop(client: VtopClient, options: LoginOptions): Pr
     }
 
     if (!/\/vtop\/login/i.test(loginResponse.url) && !isInvalidLogin(loginResponse.text)) {
-      const content = loginResponse.text.includes("authorizedID") ? loginResponse : await client.get("/vtop/content");
+      const content = /authorizedID/.test(loginResponse.text) ? loginResponse : await client.get("/vtop/content");
       return {
         session: sessionFromHtml(content.text, loginPage.csrf),
         identity: extractVtopIdentity(content.text),
@@ -88,7 +90,10 @@ export async function loginToVtop(client: VtopClient, options: LoginOptions): Pr
     if (/invalid\s+(?:username|password|credentials)/i.test(loginResponse.text)) {
       throw new VtopError("INVALID_CREDENTIALS", "invalid VTOP credentials");
     }
+
+    if (attempt < max) return attemptLogin(attempt + 1);
+    throw new VtopError("CAPTCHA_REJECTED", "VTOP rejected the solved captcha");
   }
 
-  throw new VtopError("CAPTCHA_REJECTED", "VTOP rejected the solved captcha");
+  return attemptLogin(1);
 }

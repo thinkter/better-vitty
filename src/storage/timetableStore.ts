@@ -24,15 +24,17 @@ export async function saveTimetables(timetables: readonly SemesterTimetable[]): 
   const db = await database();
   await db.withTransactionAsync(async () => {
     await db.runAsync("DELETE FROM timetables");
-    for (const timetable of timetables) {
-      await db.runAsync(
-        "INSERT INTO timetables (semester_id, semester_name, fetched_at, payload) VALUES (?, ?, ?, ?)",
-        timetable.semester.id,
-        timetable.semester.name,
-        timetable.fetchedAt,
-        JSON.stringify(timetable),
-      );
-    }
+    await Promise.all(
+      timetables.map((timetable) =>
+        db.runAsync(
+          "INSERT INTO timetables (semester_id, semester_name, fetched_at, payload) VALUES (?, ?, ?, ?)",
+          timetable.semester.id,
+          timetable.semester.name,
+          timetable.fetchedAt,
+          JSON.stringify(timetable),
+        ),
+      ),
+    );
   });
 }
 
