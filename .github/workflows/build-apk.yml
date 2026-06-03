@@ -40,13 +40,32 @@ jobs:
       - name: Generate Android project
         run: pnpm exec expo prebuild --platform android --clean --non-interactive
 
-      - name: Build debug APK on GitHub runner
-        run: ./gradlew assembleDebug
+      - name: Create temporary release keystore
+        run: |
+          keytool -genkeypair \
+            -v \
+            -storetype PKCS12 \
+            -keystore android/app/better-vitty-ci-release.keystore \
+            -storepass android \
+            -alias better-vitty-ci \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Better Vitty CI,O=Better Vitty,C=US"
+
+      - name: Build signed release APK on GitHub runner
+        run: |
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file="$PWD/app/better-vitty-ci-release.keystore" \
+            -Pandroid.injected.signing.store.password=android \
+            -Pandroid.injected.signing.key.alias=better-vitty-ci \
+            -Pandroid.injected.signing.key.password=android
         working-directory: android
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: better-vitty-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: better-vitty-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
