@@ -6,6 +6,8 @@ import { VtopError } from "./errors";
 import { extractAuthorizedId, extractCaptchaDataUri, extractCsrf, extractVtopIdentity, isRecaptchaPage, tryExtractCsrf } from "./parser";
 export type { LoginOptions } from "../lib/vtopTypes";
 
+const NETWORK_RETRY_DELAYS_MS = [1200, 2500] as const;
+
 
 function delay(ms: number): Promise<void> {
   const { promise, resolve } = Promise.withResolvers<void>();
@@ -95,5 +97,19 @@ export async function loginToVtop(client: VtopClient, options: LoginOptions): Pr
     throw new VtopError("CAPTCHA_REJECTED", "VTOP rejected the solved captcha");
   }
 
-  return attemptLogin(1);
+  async function loginWithNetworkRetry(networkAttempt: number): Promise<LoginResult> {
+    try {
+      return await attemptLogin(1);
+    } catch (err) {
+      const retryDelay = NETWORK_RETRY_DELAYS_MS[networkAttempt - 1];
+      if (err instanceof VtopError && err.code === "NETWORK_UNAVAILABLE" && retryDelay !== undefined) {
+        options.onStatus?.("connection failed, retrying...");
+        await delay(retryDelay);
+        return loginWithNetworkRetry(networkAttempt + 1);
+      }
+      throw err;
+    }
+  }
+
+  return loginWithNetworkRetry(1);
 }

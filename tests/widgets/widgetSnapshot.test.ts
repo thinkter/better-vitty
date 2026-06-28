@@ -169,13 +169,24 @@ describe("buildWidgetSnapshot", () => {
     expect(ev.endMinutes).toBe(9 * 60 + 50);
   });
 
-  it("uses first timetable when multiple provided", () => {
-    const second: SemesterTimetable = {
+  it("uses the timetable with the latest semester id when multiple provided", () => {
+    const older: SemesterTimetable = {
       ...SAMPLE_TIMETABLE,
       semester: { id: "VL2024", name: "Spring 2024-25" },
       events: [],
     };
-    const snap = buildWidgetSnapshot([SAMPLE_TIMETABLE, second]);
+    const snap = buildWidgetSnapshot([SAMPLE_TIMETABLE, older]);
+    expect(snap.semesterName).toBe("Fall 2025-26");
+    expect(snap.week.MON).toHaveLength(2);
+  });
+
+  it("picks the latest semester even when it appears last in the array", () => {
+    const older: SemesterTimetable = {
+      ...SAMPLE_TIMETABLE,
+      semester: { id: "VL2024", name: "Spring 2024-25" },
+      events: [],
+    };
+    const snap = buildWidgetSnapshot([older, SAMPLE_TIMETABLE]);
     expect(snap.semesterName).toBe("Fall 2025-26");
     expect(snap.week.MON).toHaveLength(2);
   });

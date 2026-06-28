@@ -9,6 +9,7 @@ import {
   resolveTime,
   type Day,
 } from "../lib/timetableModel";
+import { selectLatestTimetable } from "../lib/timetableShare";
 
 export interface WidgetEvent {
   readonly time: string;
@@ -31,7 +32,7 @@ export interface WidgetSnapshot {
 export const WIDGET_SNAPSHOT_KEY = "widget_snapshot_v1";
 
 export function buildWidgetSnapshot(timetables: readonly SemesterTimetable[]): WidgetSnapshot {
-  const timetable = timetables[0];
+  const timetable = timetables.length > 0 ? selectLatestTimetable(timetables) : undefined;
   const semesterName = timetable?.semester.name ?? "";
   const dayEvents = buildDayEvents(timetable?.events ?? []);
   const courseMap = buildCourseMap(timetable?.courses ?? []);
