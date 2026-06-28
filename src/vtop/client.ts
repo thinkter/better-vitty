@@ -122,7 +122,7 @@ export class VtopClient {
       response = await this.fetchImpl(url, init);
     } catch (error) {
       const retryDelay = NETWORK_RETRY_DELAYS_MS[networkAttempt];
-      if (method === "GET" && retryDelay !== undefined) {
+      if (retryDelay !== undefined) {
         await delay(retryDelay);
         return this.request(method, path, body, headers, redirectDepth, networkAttempt + 1);
       }
