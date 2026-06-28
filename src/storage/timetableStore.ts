@@ -36,6 +36,10 @@ export async function saveTimetables(timetables: readonly SemesterTimetable[]): 
       ),
     );
   });
+
+  import("../widgets/widgetSnapshot")
+    .then(({ refreshWidgetFromTimetables }) => refreshWidgetFromTimetables(timetables))
+    .catch(() => undefined);
 }
 
 export async function loadTimetables(): Promise<SemesterTimetable[]> {

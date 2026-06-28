@@ -15,6 +15,7 @@ import {
 } from "./src/storage/credentialStore";
 import { isOnboardingComplete } from "./src/storage/onboardingStore";
 import { loadTimetables } from "./src/storage/timetableStore";
+import { refreshWidgetFromTimetables } from "./src/widgets/widgetSnapshot";
 import { asVtopError } from "./src/vtop/errors";
 import { syncTimetablesFromVtop } from "./src/vtop/syncTimetables";
 
@@ -94,6 +95,7 @@ export default function App() {
       ]);
       if (!alive) return;
       setTimetables(saved);
+      refreshWidgetFromTimetables(saved).catch(() => undefined);
       if (!onboarded) {
         setScreen("onboarding");
       } else if (saved.length > 0) {
@@ -135,6 +137,7 @@ export default function App() {
       );
       await saveCredentials({ ...credentials, ...result.identity });
       setTimetables(result.timetables);
+      refreshWidgetFromTimetables(result.timetables).catch(() => undefined);
     } catch (err) {
       if (asVtopError(err).code === "INVALID_CREDENTIALS") {
         await deleteCredentials();

@@ -8,81 +8,20 @@ import {
 } from "react-native";
 import type { Course, SemesterTimetable, TimetableEvent } from "../../lib/types";
 import { usePhoneMetrics } from "../../lib/responsive";
+import {
+  DAY_ORDER,
+  buildCourseMap,
+  buildDayEvents,
+  getCurrentDayIdx,
+  resolveKind,
+  resolveTime,
+} from "../../lib/timetableModel";
 
 const MONO = "monospace";
-export const DAY_ORDER = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
 type Day = (typeof DAY_ORDER)[number];
 type PhoneMetrics = ReturnType<typeof usePhoneMetrics>;
 const DAYS: readonly Day[] = DAY_ORDER;
 const FALLBACK_DAY: Day = "MON";
-const SLOT_LETTER_ORDER = "ABCDEFG";
-
-function getCurrentDayIdx(): number {
-  const jsDay = new Date().getDay();
-  return jsDay === 0 ? 6 : jsDay - 1;
-}
-
-function parseEventSortKey(ev: TimetableEvent): number {
-  const timeMatch = /^(\d{1,2}):(\d{2})/.exec(ev.time);
-  if (timeMatch) return Number(timeMatch[1]) * 60 + Number(timeMatch[2]);
-
-  const slotMatch = /^([A-Z]+)(\d+)?/.exec(ev.slot);
-  if (!slotMatch) return Number.MAX_SAFE_INTEGER;
-  const letterIdx = SLOT_LETTER_ORDER.indexOf(slotMatch[1]![0] ?? "");
-  const number = Number(slotMatch[2] ?? "0");
-  return 1000 + (letterIdx < 0 ? 99 : letterIdx) * 100 + number;
-}
-
-function resolveKind(ev: TimetableEvent, course: Course | undefined): string {
-  if (ev.kind) return ev.kind;
-  if (course?.type === "ETH") return "Theory";
-  if (course?.type === "ELA") return "Lab";
-  return course?.type ?? "";
-}
-
-function resolveTime(ev: TimetableEvent): string {
-  return ev.time || ev.slot || "--";
-}
-
-function emptyDayBuckets(): Record<Day, TimetableEvent[]> {
-  return {
-    MON: [],
-    TUE: [],
-    WED: [],
-    THU: [],
-    FRI: [],
-    SAT: [],
-    SUN: [],
-  };
-}
-
-function dayForEvent(event: TimetableEvent): Day | null {
-  const normalized = event.day.trim().toUpperCase();
-  for (const day of DAYS) {
-    if (normalized.startsWith(day)) return day;
-  }
-  return null;
-}
-
-function buildDayEvents(events: readonly TimetableEvent[]): Record<Day, TimetableEvent[]> {
-  const buckets = emptyDayBuckets();
-  for (const event of events) {
-    const day = dayForEvent(event);
-    if (day) buckets[day].push(event);
-  }
-  for (const day of DAYS) {
-    buckets[day].sort((a, b) => parseEventSortKey(a) - parseEventSortKey(b));
-  }
-  return buckets;
-}
-
-function buildCourseMap(courses: readonly Course[]): Map<string, Course> {
-  const map = new Map<string, Course>();
-  for (const course of courses) {
-    if (!map.has(course.code)) map.set(course.code, course);
-  }
-  return map;
-}
 
 interface EventRowProps {
   readonly event: TimetableEvent;

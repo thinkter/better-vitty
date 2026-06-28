@@ -38,6 +38,25 @@
         {
           "photosPermission": "Allow Better Vitty to import timetable QR images."
         }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "Today",
+              "label": "Today's Classes",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "description": "Shows today's class schedule.",
+              "previewImage": "./assets/widget-preview-today.png",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
       ]
     ],
     "extra": {
