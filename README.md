@@ -10,6 +10,14 @@ better-vitty does it differently: it logs into VTOP directly from your phone, pu
 
 enter your VTOP credentials once. every sync after that is automatic. new semester, dropped a course, added an elective, just tap sync and it picks it up.
 
+<p align="center">
+  <img src="assets/screenshots/onboarding.jpeg" width="30%" />
+  &nbsp;&nbsp;
+  <img src="assets/screenshots/timetable.jpeg" width="30%" />
+  &nbsp;&nbsp;
+  <img src="assets/screenshots/open-source.jpeg" width="30%" />
+</p>
+
 ## features 
 
 - pulls your timetable straight from VTOP
