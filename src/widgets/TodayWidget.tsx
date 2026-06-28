@@ -1,5 +1,5 @@
 import React from "react";
-import { FlexWidget, TextWidget } from "react-native-android-widget";
+import { FlexWidget, ListWidget, TextWidget } from "react-native-android-widget";
 import { DAY_ORDER, selectCurrentNext } from "../lib/timetableModel";
 import type { WidgetSnapshot, WidgetEvent } from "./widgetSnapshot";
 
@@ -94,13 +94,11 @@ function EventRow({ ev, status, isLast }: EventRowProps) {
   );
 }
 
-export function TodayWidget({ snapshot, heightDp }: TodayWidgetProps) {
+export function TodayWidget({ snapshot }: TodayWidgetProps) {
   const today = todayKey();
   const now = nowMinutes();
   const events: readonly WidgetEvent[] = snapshot?.week[today] ?? [];
   const semesterName = snapshot?.semesterName ?? "";
-
-  const maxRows = Math.max(1, Math.floor((heightDp - 36) / 52));
 
   const { currentIndex, nextIndex } = selectCurrentNext(
     events.map((e) => ({
@@ -122,9 +120,6 @@ export function TodayWidget({ snapshot, heightDp }: TodayWidgetProps) {
     if (i === nextIndex) return "next";
     return "future";
   }
-
-  const shown = events.slice(0, maxRows);
-  const overflow = events.length - shown.length;
 
   return (
     <FlexWidget
@@ -171,21 +166,17 @@ export function TodayWidget({ snapshot, heightDp }: TodayWidgetProps) {
           style={{ color: "#2a2a2a", fontSize: 12, fontFamily: "monospace" }}
         />
       ) : (
-        <FlexWidget style={{ flexDirection: "column", width: "match_parent", flex: 1 }}>
-          {shown.map((ev, i) => (
-            <EventRow
-              key={`${ev.code}:${ev.time}:${i}`}
-              ev={ev}
-              status={statusFor(i)}
-              isLast={i === shown.length - 1 && overflow === 0}
-            />
-          ))}
-          {overflow > 0 ? (
-            <TextWidget
-              text={`  +${overflow} more`}
-              style={{ color: "#2a2a2a", fontSize: 10, fontFamily: "monospace", marginTop: 4 }}
-            />
-          ) : null}
+        <FlexWidget style={{ flex: 1, width: "match_parent" }}>
+          <ListWidget style={{ height: "match_parent", width: "match_parent" }}>
+            {events.map((ev, i) => (
+              <EventRow
+                key={`${ev.code}:${ev.time}:${i}`}
+                ev={ev}
+                status={statusFor(i)}
+                isLast={i === events.length - 1}
+              />
+            ))}
+          </ListWidget>
         </FlexWidget>
       )}
     </FlexWidget>
